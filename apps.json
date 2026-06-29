@@ -1,0 +1,86 @@
+{
+  "_comment": "Electron/CEF app download registry for hunter inspect-list",
+  "_updated": "2026-06-29",
+  "apps": [
+    {
+      "name": "VS Code",
+      "publisher": "Microsoft",
+      "url": "https://update.code.visualstudio.com/latest/darwin-universal/stable",
+      "homepage": "https://code.visualstudio.com"
+    },
+    {
+      "name": "Figma Desktop",
+      "publisher": "Figma",
+      "url": "https://desktop.figma.com/mac/Figma.zip",
+      "homepage": "https://figma.com"
+    },
+    {
+      "name": "GitHub Desktop",
+      "publisher": "GitHub",
+      "url": "https://central.github.com/deployments/desktop/desktop/latest/darwin?format=zip",
+      "homepage": "https://desktop.github.com"
+    },
+    {
+      "name": "Notion",
+      "publisher": "Notion",
+      "url": "https://www.notion.so/desktop/mac/download",
+      "homepage": "https://notion.so"
+    },
+    {
+      "name": "Obsidian",
+      "publisher": "Obsidian",
+      "github": "obsidianmd/obsidian-releases",
+      "asset_pattern": "(?i)^Obsidian-.*\\.dmg$",
+      "homepage": "https://obsidian.md"
+    },
+    {
+      "name": "Logseq",
+      "publisher": "Logseq",
+      "github": "logseq/logseq",
+      "asset_pattern": "(?i)^Logseq-darwin-x64-.*\\.zip$",
+      "homepage": "https://logseq.com"
+    },
+    {
+      "name": "Joplin",
+      "publisher": "Joplin",
+      "github": "laurent22/joplin",
+      "asset_pattern": "(?i)^Joplin-.*\\.dmg$",
+      "homepage": "https://joplinapp.org"
+    },
+    {
+      "name": "Balena Etcher",
+      "publisher": "Balena",
+      "github": "balena-io/etcher",
+      "asset_pattern": "(?i)^balenaEtcher-darwin-x64-.*\\.zip$",
+      "homepage": "https://etcher.balena.io"
+    },
+    {
+      "name": "Trilium Notes",
+      "publisher": "TriliumNext",
+      "github": "zadam/trilium",
+      "asset_pattern": "(?i)^TriliumNotes-.*-macos-x64\\.zip$",
+      "homepage": "https://github.com/zadam/trilium"
+    },
+    {
+      "name": "MarkText",
+      "publisher": "MarkText",
+      "github": "marktext/marktext",
+      "asset_pattern": "(?i)^marktext-mac-x64-.*\\.zip$",
+      "homepage": "https://marktext.app"
+    },
+    {
+      "name": "Hyper Terminal",
+      "publisher": "Vercel",
+      "github": "vercel/hyper",
+      "asset_pattern": "(?i)^Hyper-.*-mac-x64\\.zip$",
+      "homepage": "https://hyper.is"
+    },
+    {
+      "name": "eDEX-UI",
+      "publisher": "GitSquared",
+      "github": "GitSquared/edex-ui",
+      "asset_pattern": "(?i)^eDEX-UI-macOS.*\\.dmg$",
+      "homepage": "https://github.com/GitSquared/edex-ui"
+    }
+  ]
+}

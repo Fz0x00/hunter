@@ -56,20 +56,62 @@ func inspectApp(appPath string) (App, bool) {
 		return App{}, false
 	}
 
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		if e.Name() == "Electron Framework.framework" {
-			return App{
-				Name:          appNameFromPath(appPath),
-				Path:          appPath,
-				Framework:     FrameworkElectron,
-				FrameworkName: "Electron Framework",
-			}, true
-		}
+	name := appNameFromPath(appPath)
+
+	if fw := detectQtWebEngine(frameworksDir); fw != "" {
+		return App{Name: name, Path: appPath, Framework: FrameworkQtWebEngine, FrameworkName: fw}, true
 	}
 
+	if fw := detectCEF(frameworksDir, entries); fw != "" {
+		return App{Name: name, Path: appPath, Framework: FrameworkCEF, FrameworkName: fw}, true
+	}
+
+	if isStandardElectron(entries) {
+		return App{Name: name, Path: appPath, Framework: FrameworkElectron, FrameworkName: "Electron Framework"}, true
+	}
+
+	if fw := detectElectronFork(frameworksDir, entries); fw != "" {
+		return App{Name: name, Path: appPath, Framework: FrameworkElectronFork, FrameworkName: fw}, true
+	}
+
+	return App{}, false
+}
+
+func isStandardElectron(entries []os.DirEntry) bool {
+	for _, e := range entries {
+		if e.IsDir() && e.Name() == "Electron Framework.framework" {
+			return true
+		}
+	}
+	return false
+}
+
+func detectQtWebEngine(frameworksDir string) string {
+	qtFw := filepath.Join(frameworksDir, "QtWebEngineCore.framework")
+	if info, err := os.Stat(qtFw); err == nil && info.IsDir() {
+		return "QtWebEngineCore"
+	}
+	return ""
+}
+
+func detectCEF(frameworksDir string, entries []os.DirEntry) string {
+	for _, name := range []string{"libcef.dylib", "libcef.dll", "libcef.so"} {
+		if _, err := os.Stat(filepath.Join(frameworksDir, name)); err == nil {
+			return "CEF"
+		}
+	}
+	for _, e := range entries {
+		n := e.Name()
+		if strings.Contains(strings.ToLower(n), "cef") && (strings.HasSuffix(n, ".framework") || strings.HasSuffix(n, ".dylib")) {
+			if !isKnownNonFramework(n) {
+				return strings.TrimSuffix(n, ".framework")
+			}
+		}
+	}
+	return ""
+}
+
+func detectElectronFork(frameworksDir string, entries []os.DirEntry) string {
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
@@ -78,21 +120,18 @@ func inspectApp(appPath string) (App, bool) {
 		if !strings.HasSuffix(name, ".framework") {
 			continue
 		}
-		if isKnownNonFramework(name) {
+		if isKnownNonFramework(name) || isQtFramework(name) {
 			continue
 		}
 		if hasElectronHelpers(frameworksDir, name) {
-			fwName := strings.TrimSuffix(name, ".framework")
-			return App{
-				Name:          appNameFromPath(appPath),
-				Path:          appPath,
-				Framework:     FrameworkElectronFork,
-				FrameworkName: fwName,
-			}, true
+			return strings.TrimSuffix(name, ".framework")
 		}
 	}
+	return ""
+}
 
-	return App{}, false
+func isQtFramework(name string) bool {
+	return strings.HasPrefix(name, "Qt") && strings.HasSuffix(name, ".framework")
 }
 
 func isKnownNonFramework(name string) bool {

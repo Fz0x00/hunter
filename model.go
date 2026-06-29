@@ -7,6 +7,8 @@ type Framework string
 const (
 	FrameworkElectron     Framework = "electron"
 	FrameworkElectronFork Framework = "electron_fork"
+	FrameworkQtWebEngine  Framework = "qt_webengine"
+	FrameworkCEF          Framework = "cef"
 )
 
 const (

@@ -36,7 +36,7 @@ func runScan(args []string) {
 	fmt.Fprintf(os.Stderr, "[scan] hunter v%s — scanning %s\n", version, strings.Join(roots, ", "))
 	start := time.Now()
 	apps := discoverApps(roots)
-	fmt.Fprintf(os.Stderr, "[scan] found %d Electron apps, extracting versions...\n", len(apps))
+	fmt.Fprintf(os.Stderr, "[scan] found %d Chromium-embedded apps, extracting versions...\n", len(apps))
 
 	for i := range apps {
 		extractVersion(&apps[i], em)

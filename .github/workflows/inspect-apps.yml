@@ -5,6 +5,12 @@ on:
     # 每周一 UTC 03:00（北京时间 11:00）
     - cron: '0 3 * * 1'
   workflow_dispatch:
+    inputs:
+      only:
+        description: 'Comma-separated app names to inspect (empty = all)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -37,11 +43,16 @@ jobs:
 
       - name: Inspect registered apps
         run: |
+          ONLY_FLAG=""
+          if [ -n "${{ github.event.inputs.only }}" ]; then
+            ONLY_FLAG="-only ${{ github.event.inputs.only }}"
+          fi
           ./hunter inspect-list \
             -db hunter.db \
             -json inspect-results.json \
             -electron-map electron-map.json \
             -timeout 10m \
+            $ONLY_FLAG \
             apps.json 2>&1
 
       - name: Show database stats

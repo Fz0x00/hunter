@@ -63,6 +63,7 @@ func runInspectList(args []string) {
 		emPath  string
 		keep    bool
 		list    bool
+		only    string
 		timeout time.Duration
 	)
 	fs.StringVar(&jsonOut, "json", "", "write JSON report to path")
@@ -70,6 +71,7 @@ func runInspectList(args []string) {
 	fs.StringVar(&emPath, "electron-map", defaultEMPath(), "path to electron-map.json")
 	fs.BoolVar(&keep, "keep", false, "keep downloaded files")
 	fs.BoolVar(&list, "list", false, "only resolve download URLs, do not download")
+	fs.StringVar(&only, "only", "", "comma-separated app names to inspect (case-insensitive)")
 	fs.DurationVar(&timeout, "timeout", 10*time.Minute, "download timeout per app")
 	fs.Parse(args)
 
@@ -84,15 +86,29 @@ func runInspectList(args []string) {
 		os.Exit(1)
 	}
 
+	// 过滤要检测的应用
+	filter := map[string]bool{}
+	if only != "" {
+		for _, n := range strings.Split(only, ",") {
+			filter[strings.ToLower(strings.TrimSpace(n))] = true
+		}
+	}
+
 	if list {
 		fmt.Printf("%-22s %-12s %s\n", "APP", "TYPE", "URL")
 		fmt.Printf("%s\n", strings.Repeat("-", 80))
-		ok, fail := 0, 0
+		ok, fail, skipped := 0, 0, 0
 		for _, entry := range reg.Apps {
+			if len(filter) > 0 && !filter[strings.ToLower(entry.Name)] {
+				skipped++
+				continue
+			}
 			url, tag, err := entry.resolveDownloadURL()
 			typ := "direct"
 			if entry.GitHub != "" {
 				typ = "github"
+			} else if entry.ReleaseFeed != "" {
+				typ = "feed"
 			}
 			if err != nil {
 				fmt.Printf("%-22s %-12s FAIL: %v\n", entry.Name, typ, err)
@@ -106,7 +122,7 @@ func runInspectList(args []string) {
 				ok++
 			}
 		}
-		fmt.Printf("\n%d ok, %d fail, %d total\n", ok, fail, ok+fail)
+		fmt.Printf("\n%d ok, %d fail, %d skipped, %d total\n", ok, fail, skipped, ok+fail+skipped)
 		return
 	}
 
@@ -119,6 +135,9 @@ func runInspectList(args []string) {
 
 	var allApps []App
 	for _, entry := range reg.Apps {
+		if len(filter) > 0 && !filter[strings.ToLower(entry.Name)] {
+			continue
+		}
 		fmt.Fprintf(os.Stderr, "\n[inspect] === %s ===\n", entry.Name)
 		apps, err := doInspect(entry, emPath, keep, timeout)
 		if err != nil {

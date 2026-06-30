@@ -39,8 +39,8 @@ jobs:
           cd apfs-fuse && git submodule update --init
           mkdir build && cd build
           cmake -DUSE_FUSE3=ON .. && make -j$(nproc)
-          sudo cp apfs-fuse /usr/local/bin/
-          echo "apfs-fuse installed: $(apfs-fuse --help 2>&1 | head -1 || echo OK)"
+          sudo cp apfs-fuse apfs-dump /usr/local/bin/
+          echo "apfs-fuse installed: $(which apfs-fuse)"
 
       - name: Build hunter
         run: go build -o hunter .

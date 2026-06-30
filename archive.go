@@ -181,6 +181,7 @@ func extractDmg7z(dmgPath, destDir string) error {
 }
 
 // extractDmgApfsFuse 用 apfs-fuse 挂载 APFS DMG 并复制内容
+// 如果 FUSE 不可用，尝试用 dd 提取 APFS 分区后挂载
 func extractDmgApfsFuse(dmgPath, destDir string) error {
 	mountPoint, err := os.MkdirTemp("", "hunter-apfs-*")
 	if err != nil {
@@ -188,24 +189,83 @@ func extractDmgApfsFuse(dmgPath, destDir string) error {
 	}
 	defer os.RemoveAll(mountPoint)
 
-	// apfs-fuse 可以直接挂载 DMG/disk image，自动检测 APFS 分区
+	// 方案 1: 尝试 apfs-fuse 直接挂载（需要 FUSE）
 	cmd := exec.Command("apfs-fuse", "-o", "ro", dmgPath, mountPoint)
+	if _, err := cmd.CombinedOutput(); err == nil {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s -> %s\n", dmgPath, mountPoint)
+		defer func() {
+			if _, err := exec.LookPath("fusermount3"); err == nil {
+				exec.Command("fusermount3", "-u", mountPoint).Run()
+			} else {
+				exec.Command("fusermount", "-u", mountPoint).Run()
+			}
+		}()
+		return copyDirContents(mountPoint, destDir)
+	} else {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] direct mount failed: %v\n", err)
+	}
+
+	// 方案 2: 提取 APFS 分区后用 -s 挂载（处理带分区表的磁盘镜像）
+	// 微信 DMG 是 GPT 分区表 + APFS 分区，需要找到 APFS 分区的偏移
+	apfsPartition := extractAPFSPartition(dmgPath)
+	if apfsPartition != "" {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] trying partition at %s\n", apfsPartition)
+		cmd := exec.Command("apfs-fuse", "-o", "ro", apfsPartition, mountPoint)
+		if output, err := cmd.CombinedOutput(); err == nil {
+			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted partition -> %s\n", mountPoint)
+			defer func() {
+				if _, err := exec.LookPath("fusermount3"); err == nil {
+					exec.Command("fusermount3", "-u", mountPoint).Run()
+				} else {
+					exec.Command("fusermount", "-u", mountPoint).Run()
+				}
+			}()
+			return copyDirContents(mountPoint, destDir)
+		} else {
+			fmt.Fprintf(os.Stderr, "[apfs-fuse] partition mount failed: %v\n%s\n", err, output)
+			os.Remove(apfsPartition)
+		}
+	}
+
+	return fmt.Errorf("APFS extraction failed (FUSE unavailable)")
+}
+
+// extractAPFSPartition 从 GPT 磁盘镜像中提取 APFS 分区
+func extractAPFSPartition(diskImage string) string {
+	// 用 fdisk 读取分区表，找到 APFS 分区（类型 7C3457EF-0000-11AA-AA11-00306543ECAC）
+	cmd := exec.Command("fdisk", "-l", "-o", "Start,Size,Type", diskImage)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
-		return fmt.Errorf("apfs-fuse mount: %w", err)
+		return ""
 	}
-	fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s -> %s\n", dmgPath, mountPoint)
-	defer func() {
-		// Try fusermount3 first (FUSE3), then fusermount (FUSE2)
-		if _, err := exec.LookPath("fusermount3"); err == nil {
-			exec.Command("fusermount3", "-u", mountPoint).Run()
-		} else {
-			exec.Command("fusermount", "-u", mountPoint).Run()
-		}
-	}()
+	fmt.Fprintf(os.Stderr, "[fdisk] %s\n", output)
 
-	return copyDirContents(mountPoint, destDir)
+	// 解析输出找 APFS 分区
+	// APFS 分区类型 GUID: 7C3457EF-0000-11AA-AA11-00306543ECAC
+	// 在 fdisk 输出中显示为 "Apple APFS" 或类似
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "apfs") || strings.Contains(lower, "7c3457ef") {
+			// 解析 Start 和 Size
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				startSector := fields[0]
+				sizeSectors := fields[1]
+				// 用 dd 提取分区
+				outFile := diskImage + ".apfs"
+				ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
+					"bs=512", "skip="+startSector, "count="+sizeSectors, "conv=noerror,sync")
+				if ddOut, err := ddCmd.CombinedOutput(); err == nil {
+					fmt.Fprintf(os.Stderr, "[dd] extracted APFS partition -> %s\n", outFile)
+					return outFile
+				} else {
+					fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func extractPkg(pkgPath, destDir string) error {

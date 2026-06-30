@@ -23,34 +23,42 @@ func extractArchive(archivePath, destDir string) error {
 		return extractDmg(archivePath, destDir)
 	case "pkg":
 		return extractPkg(archivePath, destDir)
+	case "xz":
+		return extractCompressed(archivePath, destDir, "xz")
+	case "gz":
+		return extractCompressed(archivePath, destDir, "gz")
+	case "7z":
+		return extractCompressed(archivePath, destDir, "7z")
 	default:
 		return fmt.Errorf("unsupported archive format: %s", archivePath)
 	}
 }
 
 func detectFormat(path string) string {
-	name := strings.ToLower(filepath.Base(path))
-	switch {
-	case strings.HasSuffix(name, ".zip"):
-		return "zip"
-	case strings.HasSuffix(name, ".dmg"):
-		return "dmg"
-	case strings.HasSuffix(name, ".pkg"):
-		return "pkg"
-	case strings.HasSuffix(name, ".exe"), strings.HasSuffix(name, ".msi"):
-		return "exe"
-	}
-
-	// Magic byte 检测（只读必要的字节，不读整个文件）
-	// ZIP: 文件头 4 字节 "PK\x03\x04"
-	head := make([]byte, 4)
+	// Magic byte 检测优先（文件扩展名不可靠，如微信 DMG 实际是 XZ 压缩）
+	head := make([]byte, 6)
 	f, err := os.Open(path)
 	if err != nil {
 		return ""
 	}
 	defer f.Close()
-	if n, _ := f.Read(head); n >= 4 && string(head) == "PK\x03\x04" {
-		return "zip"
+	if n, _ := f.Read(head); n >= 4 {
+		// ZIP: "PK\x03\x04"
+		if string(head[:4]) == "PK\x03\x04" {
+			return "zip"
+		}
+		// XZ: "\xfd7zXZ"
+		if string(head[:6]) == "\xfd\x37\x7a\x58\x5a\x00" {
+			return "xz"
+		}
+		// GZ: "\x1f\x8b"
+		if head[0] == 0x1f && head[1] == 0x8b {
+			return "gz"
+		}
+		// 7z: "7z\xbc\xaf\x27\x1c"
+		if string(head[:6]) == "7z\xbc\xaf\x27\x1c" {
+			return "7z"
+		}
 	}
 
 	// DMG: 文件末尾 512 字节的 "koly" trailer
@@ -62,6 +70,15 @@ func detectFormat(path string) string {
 				return "dmg"
 			}
 		}
+	}
+
+	// Fallback: 扩展名检测（magic bytes 无法识别时）
+	name := strings.ToLower(filepath.Base(path))
+	switch {
+	case strings.HasSuffix(name, ".dmg"):
+		return "dmg"
+	case strings.HasSuffix(name, ".pkg"):
+		return "pkg"
 	}
 	return ""
 }
@@ -190,6 +207,49 @@ func copyDirContents(src, dst string) error {
 		}
 	}
 	return nil
+}
+
+// extractCompressed extracts XZ/GZ/7z archives, then recursively extracts the inner archive if needed
+func extractCompressed(archivePath, destDir string, format string) error {
+	// Step 1: Decompress to get the inner file
+	var cmd *exec.Cmd
+	switch format {
+	case "xz":
+		cmd = exec.Command("xz", "-dk", archivePath) // -d decompress, -k keep original
+	case "gz":
+		cmd = exec.Command("gzip", "-dk", archivePath) // -d decompress, -k keep original
+	case "7z":
+		for _, tool := range []string{"7z", "7za", "7zr"} {
+			if _, err := exec.LookPath(tool); err == nil {
+				cmd = exec.Command(tool, "x", archivePath, "-o"+destDir, "-y")
+				if output, err := cmd.CombinedOutput(); err != nil {
+					outStr := string(output)
+					if strings.Contains(outStr, "Dangerous link path") || strings.Contains(outStr, "Sub items Errors") {
+						if entries, derr := os.ReadDir(destDir); derr == nil && len(entries) > 0 {
+							return nil // partial success
+						}
+					}
+					return fmt.Errorf("7z extract: %w", err)
+				}
+				return nil
+			}
+		}
+		return fmt.Errorf("7z not found")
+	}
+
+	// For xz/gz: decompress to same directory, producing a file without the compression extension
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s decompress: %w\n%s", format, err, output)
+	}
+
+	// Step 2: Find the decompressed file (same name without .xz/.gz extension)
+	decompressedPath := strings.TrimSuffix(archivePath, "."+format)
+	if _, err := os.Stat(decompressedPath); err != nil {
+		return fmt.Errorf("decompressed file not found: %s", decompressedPath)
+	}
+
+	// Step 3: Recursively extract the inner archive
+	return extractArchive(decompressedPath, destDir)
 }
 
 func findAppsInDir(root string) []string {

@@ -20,6 +20,9 @@ func main() {
 		case "inspect-list":
 			runInspectList(os.Args[2:])
 			return
+		case "version-check":
+			runVersionCheck(os.Args[2:])
+			return
 		case "query":
 			runQuery(os.Args[2:])
 			return
@@ -45,6 +48,7 @@ Commands:
   scan [paths...]                  Scan local filesystem for Electron/CEF apps
   inspect <url>                    Download & inspect a single app package
   inspect-list <apps.json>         Batch inspect from a JSON app registry
+  version-check <apps.json>        Resolve URLs, compare with versions.json, report changed
   query                            Query scan history from SQLite database
   version                          Show version
 

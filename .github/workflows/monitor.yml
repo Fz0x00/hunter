@@ -1,0 +1,115 @@
+name: Monitor
+
+# 每天自动监控应用版本变更：
+# 1. Playwright 收集动态 URL → dynamic-urls.json
+# 2. hunter version-check 对比 versions.json，找出变更的 app
+# 3. 仅对变更的 app 执行 hunter inspect-list（下载+提取 Chromium 版本）
+# 4. 提交 versions.json + dynamic-urls.json
+
+on:
+  schedule:
+    # 每天 UTC 06:00（北京时间 14:00）
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force inspect all apps (ignore version tracking)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Install 7zip and xz
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils parted
+
+      - name: Build hunter
+        run: go build -o hunter .
+
+      - name: Collect dynamic download URLs
+        run: python scripts/collect_urls.py
+        continue-on-error: true
+
+      - name: Version check
+        id: vc
+        env:
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "Force mode: inspecting all apps"
+            echo "changed=all" >> $GITHUB_OUTPUT
+          else
+            OUTPUT=$(./hunter version-check -dynamic-urls dynamic-urls.json -output versions.json -platform linux apps.json 2>&1)
+            echo "$OUTPUT"
+            CHANGED=$(echo "$OUTPUT" | grep '^CHANGED=' | cut -d= -f2)
+            echo "changed=$CHANGED" >> $GITHUB_OUTPUT
+            echo "Changed apps: ${CHANGED:-none}"
+          fi
+
+      - name: Commit version tracking files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add versions.json dynamic-urls.json
+          if git diff --cached --quiet; then
+            echo "No tracking file changes"
+          else
+            git commit -m "chore: update version tracking [skip ci]"
+            git push
+          fi
+
+      - name: Inspect changed apps
+        if: steps.vc.outputs.changed != '' && steps.vc.outputs.changed != 'none'
+        env:
+          CHANGED: ${{ steps.vc.outputs.changed }}
+        run: |
+          ARGS=(-db hunter.db -json inspect-results.json -electron-map electron-map.json -timeout 10m -concurrency 5 -platform linux -dynamic-urls dynamic-urls.json)
+          if [ "$CHANGED" != "all" ]; then
+            ARGS+=(-only "$CHANGED")
+          fi
+          ./hunter inspect-list "${ARGS[@]}" apps.json 2>&1
+
+      - name: Show database stats
+        if: steps.vc.outputs.changed != ''
+        run: ./hunter query -db hunter.db -stats 2>&1
+
+      - name: Find vulnerable apps (Chromium <= 130)
+        if: steps.vc.outputs.changed != ''
+        run: ./hunter query -db hunter.db -old 130 2>&1
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: monitor-results
+          path: |
+            inspect-results.json
+            hunter.db
+            versions.json
+            dynamic-urls.json

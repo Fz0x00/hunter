@@ -35,7 +35,22 @@ func extractArchive(archivePath, destDir string) error {
 }
 
 func detectFormat(path string) string {
-	// Magic byte 检测优先（文件扩展名不可靠，如微信 DMG 实际是 XZ 压缩）
+	name := strings.ToLower(filepath.Base(path))
+
+	// 扩展名检测优先（.dmg/.pkg 扩展名优先于 magic bytes）
+	// 微信 DMG 的头部恰好是 XZ magic，但实际是标准 DMG 格式
+	switch {
+	case strings.HasSuffix(name, ".zip"):
+		return "zip"
+	case strings.HasSuffix(name, ".dmg"):
+		return "dmg"
+	case strings.HasSuffix(name, ".pkg"):
+		return "pkg"
+	case strings.HasSuffix(name, ".exe"), strings.HasSuffix(name, ".msi"):
+		return "exe"
+	}
+
+	// Magic byte 检测（扩展名无法识别时）
 	head := make([]byte, 6)
 	f, err := os.Open(path)
 	if err != nil {
@@ -61,7 +76,7 @@ func detectFormat(path string) string {
 		}
 	}
 
-	// DMG: 文件末尾 512 字节的 "koly" trailer
+	// DMG trailer check (only for files without extension)
 	fi, _ := f.Stat()
 	if fi.Size() >= 512 {
 		tail := make([]byte, 512)
@@ -70,15 +85,6 @@ func detectFormat(path string) string {
 				return "dmg"
 			}
 		}
-	}
-
-	// Fallback: 扩展名检测（magic bytes 无法识别时）
-	name := strings.ToLower(filepath.Base(path))
-	switch {
-	case strings.HasSuffix(name, ".dmg"):
-		return "dmg"
-	case strings.HasSuffix(name, ".pkg"):
-		return "pkg"
 	}
 	return ""
 }

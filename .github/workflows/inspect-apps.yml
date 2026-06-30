@@ -21,8 +21,19 @@ concurrency:
 
 jobs:
   inspect:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            artifact: inspect-results-linux
+          - os: macos-latest
+            platform: macos
+            artifact: inspect-results-macos
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +41,8 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Install 7zip, xz, and parted (for DMG/archive extraction)
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils parted
 
       - name: Build hunter
@@ -40,7 +52,7 @@ jobs:
         env:
           ONLY: ${{ github.event.inputs.only }}
         run: |
-          ARGS=(-db hunter.db -json inspect-results.json -electron-map electron-map.json -timeout 10m -concurrency 5)
+          ARGS=(-db hunter.db -json inspect-results.json -electron-map electron-map.json -timeout 10m -concurrency 5 -platform ${{ matrix.platform }})
           if [ -n "$ONLY" ]; then
             ARGS+=(-only "$ONLY")
           fi
@@ -56,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: inspect-results
+          name: ${{ matrix.artifact }}
           path: |
             inspect-results.json
             hunter.db

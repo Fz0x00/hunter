@@ -18,6 +18,7 @@ type AppEntry struct {
 	AssetPattern string `json:"asset_pattern,omitempty"`
 	ReleaseFeed  string `json:"release_feed,omitempty"`
 	Homepage     string `json:"homepage,omitempty"`
+	Platform     string `json:"platform,omitempty"` // "macos" = needs hdiutil; empty/"any" = any OS
 }
 
 type AppRegistry struct {

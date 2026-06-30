@@ -58,14 +58,15 @@ func runInspect(args []string) {
 func runInspectList(args []string) {
 	fs := flag.NewFlagSet("inspect-list", flag.ExitOnError)
 	var (
-		jsonOut     string
-		dbPath      string
-		emPath      string
-		keep        bool
-		list        bool
-		only        string
-		concurrency int
-		timeout     time.Duration
+		jsonOut        string
+		dbPath         string
+		emPath         string
+		keep           bool
+		list           bool
+		only           string
+		platformFilter string
+		concurrency    int
+		timeout        time.Duration
 	)
 	fs.StringVar(&jsonOut, "json", "", "write JSON report to path")
 	fs.StringVar(&dbPath, "db", "", "SQLite database path (stores scan history)")
@@ -73,6 +74,7 @@ func runInspectList(args []string) {
 	fs.BoolVar(&keep, "keep", false, "keep downloaded files")
 	fs.BoolVar(&list, "list", false, "only resolve download URLs, do not download")
 	fs.StringVar(&only, "only", "", "comma-separated app names to inspect (case-insensitive)")
+	fs.StringVar(&platformFilter, "platform", "", "filter by platform requirement: macos|linux|any (empty=all)")
 	fs.IntVar(&concurrency, "concurrency", 1, "number of apps to inspect in parallel")
 	fs.DurationVar(&timeout, "timeout", 10*time.Minute, "download timeout per app")
 	fs.Parse(args)
@@ -96,12 +98,30 @@ func runInspectList(args []string) {
 		}
 	}
 
+	// platformMatch returns true if entry can run on this OS given the filter
+	platformOK := func(e AppEntry) bool {
+		if platformFilter == "" {
+			return true
+		}
+		if platformFilter == "macos" {
+			return e.Platform == "macos"
+		}
+		if platformFilter == "linux" {
+			return e.Platform != "macos"
+		}
+		return true // "any"
+	}
+
 	if list {
 		fmt.Printf("%-22s %-12s %s\n", "APP", "TYPE", "URL")
 		fmt.Printf("%s\n", strings.Repeat("-", 80))
 		ok, fail, skipped := 0, 0, 0
 		for _, entry := range reg.Apps {
 			if len(filter) > 0 && !filter[strings.ToLower(entry.Name)] {
+				skipped++
+				continue
+			}
+			if !platformOK(entry) {
 				skipped++
 				continue
 			}
@@ -132,6 +152,9 @@ func runInspectList(args []string) {
 	var toInspect []AppEntry
 	for _, entry := range reg.Apps {
 		if len(filter) > 0 && !filter[strings.ToLower(entry.Name)] {
+			continue
+		}
+		if !platformOK(entry) {
 			continue
 		}
 		toInspect = append(toInspect, entry)

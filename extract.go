@@ -76,19 +76,15 @@ func extractCEFVersion(app *App) {
 // CEF Fork 版本提取（封装版 CEF，如钉钉）
 //
 // 没有标准 framework，需要在所有 dylib 和主程序里搜索
+// 优先级：dylib > 主程序（主程序通常只有 UA 字符串，不是真实渲染引擎版本）
+// 多特征验证：区分 UA 字符串和真实渲染引擎版本
 // ---------------------------------------------------------------------------
 
 func extractCEFForkVersion(app *App) {
 	// 搜索所有可能的二进制：主程序 + Frameworks/*.dylib
 	candidates := []string{}
 
-	// 主程序
-	mainBin := findAppMainBinary(app.Path)
-	if mainBin != "" {
-		candidates = append(candidates, mainBin)
-	}
-
-	// Frameworks 下的 dylib
+	// 优先：Frameworks 下的 dylib（真实渲染引擎版本在这里）
 	fwDir := filepath.Join(app.Path, "Contents", "Frameworks")
 	if entries, err := os.ReadDir(fwDir); err == nil {
 		for _, e := range entries {
@@ -98,6 +94,39 @@ func extractCEFForkVersion(app *App) {
 		}
 	}
 
+	// 其次：主程序（通常只有 UA 字符串）
+	mainBin := findAppMainBinary(app.Path)
+	if mainBin != "" {
+		candidates = append(candidates, mainBin)
+	}
+
+	// 优先取 dylib 中的版本（真实渲染引擎）
+	for _, binPath := range candidates {
+		data, err := os.ReadFile(binPath)
+		if err != nil {
+			continue
+		}
+		if v := findChromeVersion(data); v != "" {
+			// 检查是否是 UA 字符串
+			if findChromeVersionInUA(data) {
+				// 如果是 UA 字符串，跳过（除非是 dylib 且没有其他选择）
+				if strings.HasSuffix(binPath, ".dylib") {
+					// 继续检查其他 dylib
+					continue
+				}
+				continue
+			}
+			app.ChromiumVersion = v
+			app.BinaryPath = binPath
+			app.ExtractionMethod = ExtractBinaryStrings
+			// 如果是 dylib，直接返回（优先）
+			if strings.HasSuffix(binPath, ".dylib") {
+				return
+			}
+		}
+	}
+
+	// 如果所有版本都是 UA 字符串，尝试提取第一个作为参考
 	for _, binPath := range candidates {
 		data, err := os.ReadFile(binPath)
 		if err != nil {
@@ -107,6 +136,8 @@ func extractCEFForkVersion(app *App) {
 			app.ChromiumVersion = v
 			app.BinaryPath = binPath
 			app.ExtractionMethod = ExtractBinaryStrings
+			// 标记为 UA 字符串
+			app.FrameworkName += " (UA)"
 			return
 		}
 	}

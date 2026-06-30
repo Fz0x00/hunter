@@ -41,15 +41,27 @@ func detectFormat(path string) string {
 		return "exe"
 	}
 
-	data, err := os.ReadFile(path)
+	// Magic byte 检测（只读必要的字节，不读整个文件）
+	// ZIP: 文件头 4 字节 "PK\x03\x04"
+	head := make([]byte, 4)
+	f, err := os.Open(path)
 	if err != nil {
 		return ""
 	}
-	if len(data) >= 4 && string(data[:4]) == "PK\x03\x04" {
+	defer f.Close()
+	if n, _ := f.Read(head); n >= 4 && string(head) == "PK\x03\x04" {
 		return "zip"
 	}
-	if len(data) >= 512 && string(data[0:4]) == "koly" {
-		return "dmg"
+
+	// DMG: 文件末尾 512 字节的 "koly" trailer
+	fi, _ := f.Stat()
+	if fi.Size() >= 512 {
+		tail := make([]byte, 512)
+		if _, err := f.ReadAt(tail, fi.Size()-512); err == nil {
+			if string(tail[0:4]) == "koly" {
+				return "dmg"
+			}
+		}
 	}
 	return ""
 }

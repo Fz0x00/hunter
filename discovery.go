@@ -71,13 +71,16 @@ func discoverApps(roots []string) []App {
 	return apps
 }
 
-// findNestedApps 在 .app 包内搜索嵌套的 .app（微信 WeChatAppEx、QQ QQEXMiniProgram 等）
+// findNestedApps 在 .app 包内搜索嵌套的 .app
+// 微信 WeChatAppEx 在 Contents/MacOS/
+// QQ QQEXMiniProgram 在 Contents/Resources/
+// 豆包 Doubao Browser 在 Contents/Helpers/
 func findNestedApps(appPath string) []string {
 	var nested []string
-	// 常见位置：Contents/MacOS/、Contents/Resources/、Contents/Frameworks/
 	subs := []string{
 		filepath.Join(appPath, "Contents", "MacOS"),
 		filepath.Join(appPath, "Contents", "Resources"),
+		filepath.Join(appPath, "Contents", "Helpers"),
 	}
 	for _, dir := range subs {
 		entries, err := os.ReadDir(dir)
@@ -100,8 +103,9 @@ func findNestedApps(appPath string) []string {
 //   1. 排除原生浏览器
 //   2. Qt WebEngine（特征最独特：Qt 全家桶）
 //   3. CEF（官方强制 framework 名 + libcef + 二进制标记兜底）
-//   4. 标准 Electron（官方固定 framework 名）
-//   5. Electron Fork（自定义 framework + Helpers 目录 + 二进制确认）
+//   4. CEF Fork（自研 CEF 封装，如钉钉 xriver）
+//   5. 标准 Electron（官方固定 framework 名）
+//   6. Electron Fork（自定义 framework + Helpers 目录 + 二进制确认）
 // ---------------------------------------------------------------------------
 
 func inspectApp(appPath string) (App, bool) {
@@ -136,7 +140,16 @@ func inspectApp(appPath string) (App, bool) {
 		}, true
 	}
 
-	// Step 4: 标准 Electron
+	// Step 4: CEF Fork（自研 CEF 封装，如钉钉 xriver）
+	if fw, method := detectCEFFork(appPath, frameworksDir, fwEntries); fw != "" {
+		return App{
+			Name: name, Path: appPath,
+			Framework: FrameworkCEFFork, FrameworkName: fw,
+			Detection: method,
+		}, true
+	}
+
+	// Step 5: 标准 Electron
 	if fw := detectStandardElectron(frameworksDir, fwEntries); fw != "" {
 		return App{
 			Name: name, Path: appPath,
@@ -145,7 +158,7 @@ func inspectApp(appPath string) (App, bool) {
 		}, true
 	}
 
-	// Step 5: Electron Fork（自定义 framework + 二进制确认）
+	// Step 6: Electron Fork（自定义 framework + 二进制确认）
 	if fw, method := detectElectronFork(appPath, frameworksDir, fwEntries); fw != "" {
 		return App{
 			Name: name, Path: appPath,
@@ -228,7 +241,120 @@ func detectCEF(appPath string, frameworksDir string, entries []os.DirEntry) (str
 }
 
 // ---------------------------------------------------------------------------
-// Step 4: 标准 Electron 检测
+// WebKit/WKWebView 检测（用于排除非 Chromium 应用）
+//
+// 如果检测到 WKWebView/WebKit 证据，但没有 Blink/V8 证据，
+// 则认为应用使用的是 WebKit 而非 Chromium 渲染引擎
+// ---------------------------------------------------------------------------
+
+func hasWebKitEvidence(appPath string, frameworksDir string, entries []os.DirEntry) bool {
+	// 检查所有二进制文件中的 WebKit 标记
+	allBinaries := []string{}
+	if mainBin := findAppMainBinary(appPath); mainBin != "" {
+		allBinaries = append(allBinaries, mainBin)
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".dylib") {
+			allBinaries = append(allBinaries, filepath.Join(frameworksDir, e.Name()))
+		}
+	}
+
+	for _, bin := range allBinaries {
+		if countWebKitMarkers(bin) >= 2 {
+			return true
+		}
+	}
+	return false
+}
+
+// hasBlinkV8Evidence 检查是否有 Blink/V8 证据（确认 Chromium 渲染引擎）
+func hasBlinkV8Evidence(appPath string, frameworksDir string, entries []os.DirEntry) bool {
+	allBinaries := []string{}
+	if mainBin := findAppMainBinary(appPath); mainBin != "" {
+		allBinaries = append(allBinaries, mainBin)
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".dylib") {
+			allBinaries = append(allBinaries, filepath.Join(frameworksDir, e.Name()))
+		}
+	}
+
+	for _, bin := range allBinaries {
+		if countBlinkV8Markers(bin) >= 2 {
+			return true
+		}
+	}
+	return false
+}
+
+// ---------------------------------------------------------------------------
+// Step 4: CEF Fork 检测（自研 CEF 封装，多特征交叉验证）
+//
+// 特征（必须同时满足）：
+//   - 自定义 dylib（libdt_web_view.dylib, libdtriver.dylib 等）
+//   - 二进制标记：dtcef、CGraySwitch、xriver 等
+//   - 没有标准 CEF framework（Chromium Embedded Framework.framework）
+//   - 但排除：有 WKWebView/WebKit 证据但没有 Blink/V8 证据的应用
+//
+// 示例：钉钉（DingTalk）使用 WKWebView，dtcef 只是命名空间
+// ---------------------------------------------------------------------------
+
+func detectCEFFork(appPath string, frameworksDir string, entries []os.DirEntry) (string, DetectionMethod) {
+	// 先检查是否有 CEF fork 标记
+	hasCEFForkMarkers := false
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".dylib") {
+			continue
+		}
+		dylibPath := filepath.Join(frameworksDir, e.Name())
+		if countCEFForkBinaryMarkers(dylibPath) >= cefForkThreshold {
+			hasCEFForkMarkers = true
+			break
+		}
+	}
+	if !hasCEFForkMarkers {
+		if mainBin := findAppMainBinary(appPath); mainBin != "" {
+			if countCEFForkBinaryMarkers(mainBin) >= cefForkThreshold {
+				hasCEFForkMarkers = true
+			}
+		}
+	}
+
+	if !hasCEFForkMarkers {
+		return "", ""
+	}
+
+	// 多特征交叉验证：检查是否有真实 Chromium 渲染引擎
+	hasWebKit := hasWebKitEvidence(appPath, frameworksDir, entries)
+	hasBlinkV8 := hasBlinkV8Evidence(appPath, frameworksDir, entries)
+
+	// 如果有 WebKit 证据但没有 Blink/V8 证据，说明用的是 WKWebView，不是 Chromium
+	if hasWebKit && !hasBlinkV8 {
+		return "", ""
+	}
+
+	// 返回检测结果
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".dylib") {
+			continue
+		}
+		dylibPath := filepath.Join(frameworksDir, e.Name())
+		if countCEFForkBinaryMarkers(dylibPath) >= cefForkThreshold {
+			return "CEF Fork (" + e.Name() + ")", DetMethodCombined
+		}
+	}
+
+	if mainBin := findAppMainBinary(appPath); mainBin != "" {
+		if countCEFForkBinaryMarkers(mainBin) >= cefForkThreshold {
+			return "CEF Fork (main binary)", DetMethodCombined
+		}
+	}
+
+	return "", ""
+}
+
+// ---------------------------------------------------------------------------
+// Step 5: 标准 Electron 检测（renumbered from Step 4）
 //
 // 官方决定性特征：Contents/Frameworks/Electron Framework.framework/ 存在
 //   （electron-packager/electron-builder 的固定产物）
@@ -244,7 +370,7 @@ func detectStandardElectron(frameworksDir string, entries []os.DirEntry) string 
 }
 
 // ---------------------------------------------------------------------------
-// Step 5: Electron Fork 检测
+// Step 6: Electron Fork 检测
 //
 // 特征：非标准 framework 名 + Helpers 目录结构 + 二进制 Electron 标记
 // 示例：Lark Framework.framework / Qianwen Framework.framework

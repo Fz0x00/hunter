@@ -1,6 +1,6 @@
 {
   "_comment": "Electron/CEF app download registry for hunter inspect-list",
-  "_updated": "2026-06-29",
+  "_updated": "2026-06-30",
   "apps": [
     {
       "name": "VS Code",
@@ -25,6 +25,67 @@
       "publisher": "Notion",
       "url": "https://www.notion.so/desktop/mac/download",
       "homepage": "https://notion.so"
+    },
+    {
+      "name": "Postman",
+      "publisher": "Postman",
+      "url": "https://dl.pstmn.io/download/latest/osx",
+      "homepage": "https://postman.com"
+    },
+    {
+      "name": "Linear",
+      "publisher": "Linear",
+      "url": "https://releases.linear.app/mac",
+      "homepage": "https://linear.app"
+    },
+    {
+      "name": "ClickUp",
+      "publisher": "Mango Technologies",
+      "url": "https://desktop.clickup.com/mac",
+      "homepage": "https://clickup.com"
+    },
+    {
+      "name": "Asana",
+      "publisher": "Asana",
+      "url": "https://desktop-downloads.asana.com/darwin_universal/prod/latest/Asana.dmg",
+      "homepage": "https://asana.com"
+    },
+    {
+      "name": "Signal",
+      "publisher": "Signal",
+      "url": "https://updates.signal.org/desktop/signal-macos-universal-latest.dmg",
+      "homepage": "https://signal.org"
+    },
+    {
+      "name": "Discord",
+      "publisher": "Discord",
+      "url": "https://discord.com/api/download?platform=osx",
+      "homepage": "https://discord.com"
+    },
+    {
+      "name": "Claude",
+      "publisher": "Anthropic",
+      "release_feed": "https://downloads.claude.ai/releases/darwin/universal/RELEASES.json",
+      "homepage": "https://claude.com/download"
+    },
+    {
+      "name": "Slack",
+      "publisher": "Salesforce",
+      "url": "https://slack.com/ssb/download-osx-universal",
+      "homepage": "https://slack.com"
+    },
+    {
+      "name": "WeCom",
+      "publisher": "Tencent",
+      "url": "https://work.weixin.qq.com/wework_admin/commdownload",
+      "homepage": "https://work.weixin.qq.com"
+    },
+    {
+      "name": "Telegram",
+      "publisher": "Telegram",
+      "github": "telegramdesktop/tdesktop",
+      "asset_pattern": "^tsetup\\.\\d+\\.\\d+\\.\\d+\\.dmg$",
+      "homepage": "https://desktop.telegram.org"
     },
     {
       "name": "Obsidian",
@@ -81,6 +142,41 @@
       "github": "GitSquared/edex-ui",
       "asset_pattern": "(?i)^eDEX-UI-macOS.*\\.dmg$",
       "homepage": "https://github.com/GitSquared/edex-ui"
+    },
+    {
+      "name": "MongoDB Compass",
+      "publisher": "MongoDB",
+      "github": "mongodb-js/compass",
+      "asset_pattern": "^mongodb-compass-\\d+\\.\\d+\\.\\d+-darwin-arm64\\.zip$",
+      "homepage": "https://mongodb.com/products/compass"
+    },
+    {
+      "name": "Insomnia",
+      "publisher": "Kong",
+      "github": "Kong/insomnia",
+      "asset_pattern": "^Insomnia\\.Core-\\d+\\.\\d+\\.\\d+\\.dmg$",
+      "homepage": "https://insomnia.rest"
+    },
+    {
+      "name": "Beekeeper Studio",
+      "publisher": "Beekeeper Studio",
+      "github": "beekeeper-studio/beekeeper-studio",
+      "asset_pattern": "^Beekeeper-Studio-[\\d.]+-arm64-mac\\.zip$",
+      "homepage": "https://beekeeperstudio.io"
+    },
+    {
+      "name": "Mattermost Desktop",
+      "publisher": "Mattermost",
+      "github": "mattermost/desktop",
+      "asset_pattern": "^mattermost-desktop-[\\d.]+-mac-universal\\.zip$",
+      "homepage": "https://mattermost.com"
+    },
+    {
+      "name": "Rocket.Chat",
+      "publisher": "Rocket.Chat",
+      "github": "RocketChat/Rocket.Chat.Electron",
+      "asset_pattern": "^rocketchat-[\\d.]+-mac\\.dmg$",
+      "homepage": "https://rocket.chat"
     }
   ]
 }

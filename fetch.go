@@ -26,7 +26,7 @@ func downloadFile(url, destDir string, timeout time.Duration) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "hunter/"+version)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) hunter/"+version)
 
 	resp, err := client.Do(req)
 	if err != nil {

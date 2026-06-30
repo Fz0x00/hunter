@@ -28,6 +28,10 @@ const (
 	DetMethodBinaryStrings DetectionMethod = "binary_strings"
 	// 组合判定（目录 + 二进制交叉验证）
 	DetMethodCombined DetectionMethod = "combined"
+	// UA 字符串（仅 User-Agent 中有 Chrome 版本，非真实渲染引擎）
+	DetMethodUAString DetectionMethod = "ua_string"
+	// WebKit/WKWebView（macOS 原生，非 Chromium）
+	DetMethodWebKit DetectionMethod = "webkit"
 )
 
 // 版本提取方法（优先级降级链）

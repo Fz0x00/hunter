@@ -62,12 +62,14 @@ func runInspectList(args []string) {
 		dbPath  string
 		emPath  string
 		keep    bool
+		list    bool
 		timeout time.Duration
 	)
 	fs.StringVar(&jsonOut, "json", "", "write JSON report to path")
 	fs.StringVar(&dbPath, "db", "", "SQLite database path (stores scan history)")
 	fs.StringVar(&emPath, "electron-map", defaultEMPath(), "path to electron-map.json")
 	fs.BoolVar(&keep, "keep", false, "keep downloaded files")
+	fs.BoolVar(&list, "list", false, "only resolve download URLs, do not download")
 	fs.DurationVar(&timeout, "timeout", 10*time.Minute, "download timeout per app")
 	fs.Parse(args)
 
@@ -80,6 +82,32 @@ func runInspectList(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[error] %v\n", err)
 		os.Exit(1)
+	}
+
+	if list {
+		fmt.Printf("%-22s %-12s %s\n", "APP", "TYPE", "URL")
+		fmt.Printf("%s\n", strings.Repeat("-", 80))
+		ok, fail := 0, 0
+		for _, entry := range reg.Apps {
+			url, tag, err := entry.resolveDownloadURL()
+			typ := "direct"
+			if entry.GitHub != "" {
+				typ = "github"
+			}
+			if err != nil {
+				fmt.Printf("%-22s %-12s FAIL: %v\n", entry.Name, typ, err)
+				fail++
+			} else {
+				notes := ""
+				if tag != "" {
+					notes = "tag=" + tag
+				}
+				fmt.Printf("%-22s %-12s %s %s\n", entry.Name, typ, url, notes)
+				ok++
+			}
+		}
+		fmt.Printf("\n%d ok, %d fail, %d total\n", ok, fail, ok+fail)
+		return
 	}
 
 	var em *ElectronMap

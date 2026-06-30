@@ -121,7 +121,16 @@ func extractDmg7z(dmgPath, destDir string) error {
 			continue
 		}
 		cmd := exec.Command(tool, "x", dmgPath, "-o"+destDir, "-y")
-		if output, err := cmd.CombinedOutput(); err != nil {
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			// 7z 对 DMG 里的 /Applications 符号链接会报 "Dangerous link path"
+			// 但 .app 本身已经提取成功，检查目标目录是否有内容即可
+			outStr := string(output)
+			if strings.Contains(outStr, "Dangerous link path") || strings.Contains(outStr, "Sub items Errors") {
+				if entries, derr := os.ReadDir(destDir); derr == nil && len(entries) > 0 {
+					return nil // 文件已提取，符号链接跳过是 OK 的
+				}
+			}
 			return fmt.Errorf("%s: %w\n%s", tool, err, output)
 		}
 		return nil

@@ -15,6 +15,12 @@ var (
 
 // extractVersion 根据框架类型定制版本提取策略
 func extractVersion(app *App, em *ElectronMap) {
+	// 读取应用自身版本（CFBundleShortVersionString）
+	app.AppVersion = readPlistField(
+		filepath.Join(app.Path, "Contents", "Info.plist"),
+		"CFBundleShortVersionString",
+	)
+
 	switch app.Framework {
 	case FrameworkCEF:
 		extractCEFVersion(app)

@@ -79,8 +79,8 @@ func printQueryTable(rows []AppRow) {
 		return
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "APP\tFRAMEWORK\tCHROMIUM\tELECTRON\tSCAN_TIME")
-	fmt.Fprintln(w, strings.Repeat("-", 16)+"\t"+strings.Repeat("-", 12)+"\t"+strings.Repeat("-", 8)+"\t"+strings.Repeat("-", 8)+"\t"+strings.Repeat("-", 20))
+	fmt.Fprintln(w, "APP\tVER\tFRAMEWORK\tCHROMIUM\tELECTRON\tSCAN_TIME")
+	fmt.Fprintln(w, strings.Repeat("-", 16)+"\t"+strings.Repeat("-", 10)+"\t"+strings.Repeat("-", 12)+"\t"+strings.Repeat("-", 16)+"\t"+strings.Repeat("-", 10)+"\t"+strings.Repeat("-", 20))
 	for _, r := range rows {
 		chrome := r.ChromiumVersion
 		if chrome == "" {
@@ -90,12 +90,16 @@ func printQueryTable(rows []AppRow) {
 		if electron == "" {
 			electron = "-"
 		}
+		appVer := r.AppVersion
+		if appVer == "" {
+			appVer = "-"
+		}
 		scanTime := r.ScanTime
 		if len(scanTime) >= 10 {
 			scanTime = scanTime[:10]
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			trunc(r.Name, 28), r.Framework, chrome, electron, scanTime)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			trunc(r.Name, 28), trunc(appVer, 12), r.Framework, chrome, electron, scanTime)
 	}
 	w.Flush()
 }

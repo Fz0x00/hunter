@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS apps (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
     scan_id           INTEGER NOT NULL,
     name              TEXT    NOT NULL,
+    app_version       TEXT,
     path              TEXT,
     bundle_id         TEXT,
     framework         TEXT    NOT NULL,
@@ -89,11 +90,44 @@ func OpenDB(path string) (*DB, error) {
 		conn.Close()
 		return nil, fmt.Errorf("init schema: %w", err)
 	}
+	// Migration: 为旧数据库添加 app_version 列
+	if err := migrateAppVersion(conn); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("migrate app_version: %w", err)
+	}
 	return &DB{conn: conn}, nil
 }
 
 func (d *DB) Close() error {
 	return d.conn.Close()
+}
+
+// migrateAppVersion 检查 apps 表是否有 app_version 列，没有则添加（兼容旧 DB）
+func migrateAppVersion(conn *sql.DB) error {
+	rows, err := conn.Query("PRAGMA table_info(apps)")
+	if err != nil {
+		return err
+	}
+	hasCol := false
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		if name == "app_version" {
+			hasCol = true
+		}
+	}
+	rows.Close()
+	if !hasCol {
+		_, err := conn.Exec("ALTER TABLE apps ADD COLUMN app_version TEXT")
+		return err
+	}
+	return nil
 }
 
 // InsertScan 插入一次扫描批次及其所有应用记录
@@ -124,10 +158,10 @@ func (d *DB) InsertScan(result ScanResult) (int64, error) {
 	// 2. 批量插入 apps
 	stmt, err := tx.Prepare(
 		`INSERT INTO apps
-		   (scan_id, name, path, bundle_id, framework, framework_name,
+		   (scan_id, name, app_version, path, bundle_id, framework, framework_name,
 		    detection, chromium_version, electron_version, cef_version,
 		    extraction_method, binary_path, created_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("prepare apps insert: %w", err)
@@ -137,7 +171,7 @@ func (d *DB) InsertScan(result ScanResult) (int64, error) {
 	for _, app := range result.Apps {
 		bundleID := readPlistBundleIDSafe(app.Path)
 		if _, err := stmt.Exec(
-			scanID, app.Name, app.Path, bundleID,
+			scanID, app.Name, app.AppVersion, app.Path, bundleID,
 			string(app.Framework), app.FrameworkName,
 			string(app.Detection), app.ChromiumVersion,
 			app.ElectronVersion, app.CEFVersion,
@@ -157,6 +191,7 @@ func (d *DB) InsertScan(result ScanResult) (int64, error) {
 type AppRow struct {
 	ScanID           int64  `json:"scan_id"`
 	Name             string `json:"app_name"`
+	AppVersion       string `json:"app_version,omitempty"`
 	Path             string `json:"app_path"`
 	BundleID         string `json:"bundle_id,omitempty"`
 	Framework        string `json:"framework"`
@@ -173,7 +208,7 @@ type AppRow struct {
 // QueryLatest 返回所有应用的最新快照
 func (d *DB) QueryLatest() ([]AppRow, error) {
 	rows, err := d.conn.Query(
-		`SELECT a.name, a.path, a.bundle_id, a.framework, a.framework_name,
+		`SELECT a.name, a.app_version, a.path, a.bundle_id, a.framework, a.framework_name,
 		        a.detection, a.chromium_version, a.electron_version, a.cef_version,
 		        a.extraction_method, a.binary_path, s.scan_time
 		 FROM latest_apps a
@@ -190,7 +225,7 @@ func (d *DB) QueryLatest() ([]AppRow, error) {
 // QueryByName 返回某应用的所有历史扫描记录
 func (d *DB) QueryByName(name string) ([]AppRow, error) {
 	rows, err := d.conn.Query(
-		`SELECT a.name, a.path, a.bundle_id, a.framework, a.framework_name,
+		`SELECT a.name, a.app_version, a.path, a.bundle_id, a.framework, a.framework_name,
 		        a.detection, a.chromium_version, a.electron_version, a.cef_version,
 		        a.extraction_method, a.binary_path, s.scan_time
 		 FROM apps a
@@ -209,7 +244,7 @@ func (d *DB) QueryByName(name string) ([]AppRow, error) {
 // QueryByChromium 返回使用特定 Chromium 版本范围的所有应用
 func (d *DB) QueryByChromium(minMajor, maxMajor int) ([]AppRow, error) {
 	rows, err := d.conn.Query(
-		`SELECT a.name, a.path, a.bundle_id, a.framework, a.framework_name,
+		`SELECT a.name, a.app_version, a.path, a.bundle_id, a.framework, a.framework_name,
 		        a.detection, a.chromium_version, a.electron_version, a.cef_version,
 		        a.extraction_method, a.binary_path, s.scan_time
 		 FROM latest_apps a
@@ -284,13 +319,14 @@ func scanAppRows(rows *sql.Rows) ([]AppRow, error) {
 	var result []AppRow
 	for rows.Next() {
 		var r AppRow
-		var path, bundleID, fwName, detection, chrome, electron, cef, method, binPath, scanTime sql.NullString
+		var appVer, path, bundleID, fwName, detection, chrome, electron, cef, method, binPath, scanTime sql.NullString
 		if err := rows.Scan(
-			&r.Name, &path, &bundleID, &r.Framework, &fwName,
+			&r.Name, &appVer, &path, &bundleID, &r.Framework, &fwName,
 			&detection, &chrome, &electron, &cef, &method, &binPath, &scanTime,
 		); err != nil {
 			return nil, err
 		}
+		r.AppVersion = appVer.String
 		r.Path = path.String
 		r.BundleID = bundleID.String
 		r.FrameworkName = fwName.String

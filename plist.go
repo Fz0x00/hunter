@@ -89,8 +89,9 @@ func scanBinaryField(data []byte, key string) string {
 			continue
 		}
 		if key == "CFBundleShortVersionString" {
-			if m := semverRe.FindString(cleaned); m != "" {
-				return m
+			// 返回原始值，由调用方决定是否过滤
+			if isASCII(cleaned) {
+				return cleaned
 			}
 		} else if key == "CFBundleIdentifier" {
 			if isASCII(cleaned) && strings.Contains(cleaned, ".") && len(cleaned) > 6 {

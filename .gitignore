@@ -1,5 +1,7 @@
 hunter
-*.db
-*.db-wal
-*.db-shm
-*.json.bak
+hunter.db
+hunter.db-*
+.cache/
+*.zip
+*.dmg
+*.pkg

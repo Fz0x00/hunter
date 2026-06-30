@@ -48,6 +48,7 @@ const (
 // App 表示一个被检测到的 Chromium 嵌入式应用
 type App struct {
 	Name             string           `json:"app_name"`
+	AppVersion       string           `json:"app_version,omitempty"`
 	Path             string           `json:"app_path"`
 	Framework        Framework        `json:"framework"`
 	FrameworkName    string           `json:"framework_name,omitempty"`

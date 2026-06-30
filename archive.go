@@ -338,7 +338,7 @@ func extractCompressed(archivePath, destDir string, format string) error {
 
 func findAppsInDir(root string) []string {
 	var apps []string
-	maxDepth := 6
+	maxDepth := 8
 	filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -351,9 +351,9 @@ func findAppsInDir(root string) []string {
 			}
 			return nil
 		}
+		// 收集所有 .app（含嵌套的 WeChatAppEx.app 等），不 SkipDir
 		if d.IsDir() && strings.HasSuffix(path, ".app") {
 			apps = append(apps, path)
-			return filepath.SkipDir
 		}
 		return nil
 	})

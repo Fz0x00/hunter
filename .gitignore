@@ -1,2 +1,5 @@
 hunter
+*.db
+*.db-wal
+*.db-shm
 *.json.bak

@@ -59,13 +59,14 @@ type App struct {
 type ScanResult struct {
 	Platform  string    `json:"platform"`
 	ScanTime  string    `json:"scan_time"`
-	Scope     string    `json:"scope"`
+	Source    string    `json:"source"`     // local / inspect / inspect-list
+	Scope     string    `json:"scope"`      // 具体路径/URL/registry文件
 	Total     int       `json:"total_apps"`
 	WithCVER  int       `json:"with_chromium_version"`
 	Apps      []App     `json:"apps"`
 }
 
-func newScanResult(apps []App, scope string) ScanResult {
+func newScanResult(apps []App, source, scope string) ScanResult {
 	with := 0
 	for _, a := range apps {
 		if a.ChromiumVersion != "" {
@@ -75,6 +76,7 @@ func newScanResult(apps []App, scope string) ScanResult {
 	return ScanResult{
 		Platform: "macos",
 		ScanTime: time.Now().UTC().Format(time.RFC3339),
+		Source:   source,
 		Scope:    scope,
 		Total:    len(apps),
 		WithCVER: with,

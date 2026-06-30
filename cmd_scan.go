@@ -15,9 +15,11 @@ func runScan(args []string) {
 	fs := flag.NewFlagSet("scan", flag.ExitOnError)
 	var (
 		jsonOut string
+		dbPath  string
 		emPath  string
 	)
 	fs.StringVar(&jsonOut, "json", "", "write JSON report to `path`")
+	fs.StringVar(&dbPath, "db", "", "SQLite database `path` (stores scan history)")
 	fs.StringVar(&emPath, "electron-map", defaultEMPath(), "path to electron-map.json")
 	fs.Parse(args)
 
@@ -45,8 +47,24 @@ func runScan(args []string) {
 
 	printTable(apps)
 
+	result := newScanResult(apps, "local", strings.Join(roots, ","))
+
+	if dbPath != "" {
+		db, err := OpenDB(dbPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[error] failed to open db: %v\n", err)
+			os.Exit(1)
+		}
+		scanID, err := db.InsertScan(result)
+		db.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[error] failed to insert scan: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "[db] scan #%d saved to %s\n", scanID, dbPath)
+	}
+
 	if jsonOut != "" {
-		result := newScanResult(apps, strings.Join(roots, ","))
 		if err := writeJSON(jsonOut, result); err != nil {
 			fmt.Fprintf(os.Stderr, "[error] failed to write JSON: %v\n", err)
 			os.Exit(1)

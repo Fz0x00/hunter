@@ -59,11 +59,13 @@ func runInspectList(args []string) {
 	fs := flag.NewFlagSet("inspect-list", flag.ExitOnError)
 	var (
 		jsonOut string
+		dbPath  string
 		emPath  string
 		keep    bool
 		timeout time.Duration
 	)
 	fs.StringVar(&jsonOut, "json", "", "write JSON report to path")
+	fs.StringVar(&dbPath, "db", "", "SQLite database path (stores scan history)")
 	fs.StringVar(&emPath, "electron-map", defaultEMPath(), "path to electron-map.json")
 	fs.BoolVar(&keep, "keep", false, "keep downloaded files")
 	fs.DurationVar(&timeout, "timeout", 10*time.Minute, "download timeout per app")
@@ -104,8 +106,24 @@ func runInspectList(args []string) {
 		printTable(apps)
 	}
 
+	result := newScanResult(allApps, "inspect-list", fs.Arg(0))
+
+	if dbPath != "" {
+		db, err := OpenDB(dbPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[error] failed to open db: %v\n", err)
+			os.Exit(1)
+		}
+		scanID, err := db.InsertScan(result)
+		db.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[error] failed to insert scan: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "\n[db] scan #%d saved to %s\n", scanID, dbPath)
+	}
+
 	if jsonOut != "" {
-		result := newScanResult(allApps, fs.Arg(0))
 		if err := writeJSON(jsonOut, result); err != nil {
 			fmt.Fprintf(os.Stderr, "[error] %v\n", err)
 			os.Exit(1)

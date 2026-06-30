@@ -38,14 +38,23 @@ jobs:
       - name: Inspect registered apps
         run: |
           ./hunter inspect-list \
+            -db hunter.db \
             -json inspect-results.json \
             -electron-map electron-map.json \
             -timeout 10m \
             apps.json 2>&1
+
+      - name: Show database stats
+        run: ./hunter query -db hunter.db -stats 2>&1
+
+      - name: Find vulnerable apps (Chromium <= 130)
+        run: ./hunter query -db hunter.db -old 130 2>&1
 
       - name: Upload results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: inspect-results
-          path: inspect-results.json
+          path: |
+            inspect-results.json
+            hunter.db

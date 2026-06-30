@@ -81,12 +81,6 @@
       "homepage": "https://work.weixin.qq.com"
     },
     {
-      "name": "WeChat",
-      "publisher": "Tencent",
-      "url": "https://dldir1v6.qq.com/weixin/Universal/Mac/WeChatMac.dmg",
-      "homepage": "https://weixin.qq.com"
-    },
-    {
       "name": "Telegram",
       "publisher": "Telegram",
       "github": "telegramdesktop/tdesktop",

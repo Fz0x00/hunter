@@ -154,30 +154,20 @@ func extractDmgMac(dmgPath, destDir string) error {
 }
 
 func extractDmg7z(dmgPath, destDir string) error {
-	fmt.Fprintf(os.Stderr, "[dmg7z] start: %s\n", dmgPath)
-
 	// 优先尝试 apfs-fuse（支持 APFS 磁盘镜像）
 	if _, err := exec.LookPath("apfs-fuse"); err == nil {
-		fmt.Fprintf(os.Stderr, "[dmg7z] trying apfs-fuse...\n")
 		if err := extractDmgApfsFuse(dmgPath, destDir); err == nil {
 			return nil
-		} else {
-			fmt.Fprintf(os.Stderr, "[dmg7z] apfs-fuse failed: %v\n", err)
 		}
-	} else {
-		fmt.Fprintf(os.Stderr, "[dmg7z] apfs-fuse not found, skipping\n")
 	}
 
 	// 回退到 7z（支持 HFS+ DMG 或 XZ 压缩的磁盘镜像）
 	for _, tool := range []string{"7z", "7za", "7zr"} {
 		if _, err := exec.LookPath(tool); err != nil {
-			fmt.Fprintf(os.Stderr, "[dmg7z] %s not found\n", tool)
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "[dmg7z] trying %s...\n", tool)
 		cmd := exec.Command(tool, "x", dmgPath, "-o"+destDir, "-y")
 		output, err := cmd.CombinedOutput()
-		fmt.Fprintf(os.Stderr, "[7z] output: %s\n", string(output))
 
 		// 7z 提取后检查：如果产物是原始磁盘镜像（非 .app），需要进一步提取 APFS
 		entries, _ := os.ReadDir(destDir)
@@ -186,12 +176,9 @@ func extractDmg7z(dmgPath, destDir string) error {
 		 fullPath := filepath.Join(destDir, e.Name())
 		 if !e.IsDir() && !strings.HasSuffix(e.Name(), ".app") {
 			 if info, err := os.Stat(fullPath); err == nil && info.Size() > 1024*1024 {
-				 fmt.Fprintf(os.Stderr, "[7z] extracted raw disk image: %s (%d MB)\n", e.Name(), info.Size()/(1024*1024))
 				 if apfsErr := extractAPFSFromDiskImage(fullPath, destDir); apfsErr == nil {
 					 os.Remove(fullPath)
 					 return nil
-				 } else {
-					 fmt.Fprintf(os.Stderr, "[7z] APFS extraction failed: %v\n", apfsErr)
 				 }
 				 hasRawDisk = true
 			 }
@@ -222,8 +209,7 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 
 	// 直接用 apfs-fuse 挂载（支持 APFS 分区和完整磁盘镜像）
 	cmd := exec.Command("apfs-fuse", "-o", "ro", diskImage, mountPoint)
-	if output, err := cmd.CombinedOutput(); err == nil {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted -> %s\n", mountPoint)
+	if _, err := cmd.CombinedOutput(); err == nil {
 		defer func() {
 			if _, err := exec.LookPath("fusermount3"); err == nil {
 				exec.Command("fusermount3", "-u", mountPoint).Run()
@@ -232,8 +218,6 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 			}
 		}()
 		return copyDirContents(mountPoint, destDir)
-	} else {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
 	}
 
 	return fmt.Errorf("APFS extraction failed")
@@ -252,7 +236,6 @@ func extractDmgApfsFuse(dmgPath, destDir string) error {
 		return fmt.Errorf("apfs-fuse: %w\n%s", err, output)
 	}
 
-	fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s -> %s\n", dmgPath, mountPoint)
 	defer func() {
 		if _, err := exec.LookPath("fusermount3"); err == nil {
 			exec.Command("fusermount3", "-u", mountPoint).Run()

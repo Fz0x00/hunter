@@ -177,7 +177,28 @@ func extractDmg7z(dmgPath, destDir string) error {
 		fmt.Fprintf(os.Stderr, "[dmg7z] trying %s...\n", tool)
 		cmd := exec.Command(tool, "x", dmgPath, "-o"+destDir, "-y")
 		output, err := cmd.CombinedOutput()
-		if err != nil {
+		fmt.Fprintf(os.Stderr, "[7z] output: %s\n", string(output))
+
+		// 7z 提取后检查：如果产物是原始磁盘镜像（非 .app），需要进一步提取 APFS
+		entries, _ := os.ReadDir(destDir)
+		hasRawDisk := false
+		for _, e := range entries {
+		 fullPath := filepath.Join(destDir, e.Name())
+		 if !e.IsDir() && !strings.HasSuffix(e.Name(), ".app") {
+			 if info, err := os.Stat(fullPath); err == nil && info.Size() > 1024*1024 {
+				 fmt.Fprintf(os.Stderr, "[7z] extracted raw disk image: %s (%d MB)\n", e.Name(), info.Size()/(1024*1024))
+				 if apfsErr := extractAPFSFromDiskImage(fullPath, destDir); apfsErr == nil {
+					 os.Remove(fullPath)
+					 return nil
+				 } else {
+					 fmt.Fprintf(os.Stderr, "[7z] APFS extraction failed: %v\n", apfsErr)
+				 }
+				 hasRawDisk = true
+			 }
+		 }
+		}
+
+		if err != nil && !hasRawDisk {
 			outStr := string(output)
 			if strings.Contains(outStr, "Dangerous link path") || strings.Contains(outStr, "Sub items Errors") {
 				if entries, derr := os.ReadDir(destDir); derr == nil && len(entries) > 0 {
@@ -185,28 +206,6 @@ func extractDmg7z(dmgPath, destDir string) error {
 				}
 			}
 			return fmt.Errorf("%s: %w\n%s", tool, err, output)
-		}
-
-		// 7z 提取后检查：如果产物是原始磁盘镜像（非 .app），需要进一步提取 APFS
-		entries, _ := os.ReadDir(destDir)
-		for _, e := range entries {
-		 fullPath := filepath.Join(destDir, e.Name())
-		 if !e.IsDir() && !strings.HasSuffix(e.Name(), ".app") {
-			 // 可能是 7z 从 XZ 中提取的原始磁盘镜像
-			 if info, err := os.Stat(fullPath); err == nil && info.Size() > 1024*1024 {
-				 fmt.Fprintf(os.Stderr, "[7z] extracted raw disk image: %s (%d MB)\n", e.Name(), info.Size()/(1024*1024))
-				 if apfsErr := extractAPFSFromDiskImage(fullPath, destDir); apfsErr == nil {
-					 os.Remove(fullPath) // 清理原始磁盘镜像
-					 return nil
-				 } else {
-					 fmt.Fprintf(os.Stderr, "[7z] APFS extraction failed: %v\n", apfsErr)
-				 }
-			 }
-		 }
-		}
-		fmt.Fprintf(os.Stderr, "[7z] no raw disk image found, checking entries:\n")
-		for _, e := range entries {
-			fmt.Fprintf(os.Stderr, "  - %s (dir=%v)\n", e.Name(), e.IsDir())
 		}
 		return nil
 	}

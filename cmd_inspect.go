@@ -259,6 +259,18 @@ func doInspect(entry AppEntry, emPath string, keep bool, timeout time.Duration) 
 
 	appPaths := findAppsInDir(extractDir)
 	if len(appPaths) == 0 {
+		// Debug: list what was actually extracted
+		filepath.WalkDir(extractDir, func(path string, d os.DirEntry, err error) error {
+			if err != nil || path == extractDir {
+				return nil
+			}
+			rel, _ := filepath.Rel(extractDir, path)
+			depth := strings.Count(rel, string(filepath.Separator))
+			if depth <= 2 {
+				fmt.Fprintf(os.Stderr, "  [debug] %s%s\n", rel, map[bool]string{true: "/", false: ""}[d.IsDir()])
+			}
+			return nil
+		})
 		return nil, fmt.Errorf("no .app found in %s", filepath.Base(archivePath))
 	}
 

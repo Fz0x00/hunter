@@ -57,18 +57,24 @@ func runScan(args []string) {
 
 func printTable(apps []App) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "APPLICATION\tFRAMEWORK\tCHROMIUM\tELECTRON\tMETHOD")
-	fmt.Fprintln(w, strings.Repeat("-", 11)+"\t"+strings.Repeat("-", 9)+"\t"+strings.Repeat("-", 8)+"\t"+strings.Repeat("-", 8)+"\t"+strings.Repeat("-", 6))
+	fmt.Fprintln(w, "APP\tFRAMEWORK\tCHROMIUM\tVERSION\tDETECTION\tMETHOD")
+	fmt.Fprintln(w, strings.Repeat("-", 16)+"\t"+strings.Repeat("-", 12)+"\t"+strings.Repeat("-", 8)+"\t"+strings.Repeat("-", 8)+"\t"+strings.Repeat("-", 12)+"\t"+strings.Repeat("-", 12))
 	for _, a := range apps {
 		chrome := a.ChromiumVersion
 		if chrome == "" {
 			chrome = "?"
 		}
-		electron := a.ElectronVersion
-		if electron == "" {
-			electron = "-"
+		version := a.ElectronVersion
+		if a.CEFVersion != "" {
+			version = a.CEFVersion
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", trunc(a.Name, 32), a.Framework, chrome, electron, a.ExtractionMethod)
+		if version == "" {
+			version = "-"
+		}
+		det := string(a.Detection)
+		method := string(a.ExtractionMethod)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			trunc(a.Name, 28), a.Framework, chrome, version, det, method)
 	}
 	w.Flush()
 }

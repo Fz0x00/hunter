@@ -128,13 +128,6 @@ func runInspectList(args []string) {
 		return
 	}
 
-	var em *ElectronMap
-	if info, err := os.Stat(emPath); err == nil && !info.IsDir() {
-		if m, err := LoadElectronMap(emPath); err == nil {
-			em = m
-		}
-	}
-
 	// 筛选要检测的应用
 	var toInspect []AppEntry
 	for _, entry := range reg.Apps {
@@ -147,6 +140,7 @@ func runInspectList(args []string) {
 	if concurrency <= 1 {
 		// 串行模式（默认，日志清晰）
 		var allApps []App
+		seen := make(map[string]bool)
 		for _, entry := range toInspect {
 			fmt.Fprintf(os.Stderr, "\n[inspect] === %s ===\n", entry.Name)
 			apps, err := doInspect(entry, emPath, keep, timeout)
@@ -154,12 +148,14 @@ func runInspectList(args []string) {
 				fmt.Fprintf(os.Stderr, "[error] %s: %v\n", entry.Name, err)
 				continue
 			}
-			if em == nil {
-				if m, _ := LoadElectronMap(emPath); m != nil {
-					em = m
+			for _, a := range apps {
+				key := a.Name + "|" + a.ChromiumVersion
+				if seen[key] {
+					continue
 				}
+				seen[key] = true
+				allApps = append(allApps, a)
 			}
-			allApps = append(allApps, apps...)
 			printTable(apps)
 		}
 		finishInspectList(allApps, fs.Arg(0), dbPath, jsonOut)
@@ -178,23 +174,26 @@ func runInspectList(args []string) {
 		go func(e AppEntry) {
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			apps, err := doInspectQuiet(e, emPath, keep, timeout)
+			apps, err := doInspect(e, emPath, keep, timeout)
 			results <- result{e, apps, err}
 		}(entry)
 	}
 	var allApps []App
+	seen := make(map[string]bool)
 	for i := 0; i < len(toInspect); i++ {
 		r := <-results
 		if r.err != nil {
 			fmt.Fprintf(os.Stderr, "[error] %s: %v\n", r.entry.Name, r.err)
 			continue
 		}
-		if em == nil {
-			if m, _ := LoadElectronMap(emPath); m != nil {
-				em = m
+		for _, a := range r.apps {
+			key := a.Name + "|" + a.ChromiumVersion
+			if seen[key] {
+				continue
 			}
+			seen[key] = true
+			allApps = append(allApps, a)
 		}
-		allApps = append(allApps, r.apps...)
 		fmt.Fprintf(os.Stderr, "[done] %s — %d app(s)\n", r.entry.Name, len(r.apps))
 		printTable(r.apps)
 	}
@@ -228,11 +227,7 @@ func finishInspectList(allApps []App, scope, dbPath, jsonOut string) {
 	}
 }
 
-// doInspectQuiet 静默版本的 doInspect（不输出进度日志），用于并行模式
-func doInspectQuiet(entry AppEntry, emPath string, keep bool, timeout time.Duration) ([]App, error) {
-	return doInspect(entry, emPath, keep, timeout)
-}
-
+// doInspect is the core inspect function used by both serial and parallel modes.
 func doInspect(entry AppEntry, emPath string, keep bool, timeout time.Duration) ([]App, error) {
 	url, tag, err := entry.resolveDownloadURL()
 	if err != nil {

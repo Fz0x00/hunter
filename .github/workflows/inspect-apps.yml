@@ -32,7 +32,7 @@ jobs:
 
       - name: Install 7zip, xz, and apfs-fuse (for DMG/archive extraction)
         run: |
-          sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils \
+          sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils parted \
             fuse3 libfuse3-dev bzip2 libbz2-dev cmake g++ git libattr1-dev zlib1g-dev
           cd /tmp
           git clone --depth 1 https://github.com/sgan81/apfs-fuse.git

@@ -203,38 +203,42 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 	}
 	defer os.RemoveAll(mountPoint)
 
-	// 用 fdisk 找 APFS 分区偏移
-	cmd := exec.Command("fdisk", "-d", diskImage)
+	// 用 parted 找 APFS 分区偏移（支持 GPT 和 APM）
+	cmd := exec.Command("parted", "-s", "-m", diskImage, "unit", "s", "print")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("fdisk: %w", err)
+		return fmt.Errorf("parted: %w\n%s", err, output)
 	}
 
-	// 解析 fdisk -d 输出找 APFS 分区
-	// 输出格式: "start=..., size=..., type=..."
+	// 解析 parted -m 输出找 APFS 分区
+	// 格式: "partNum:startSec:endSec:sizeSec:filesystemType:partitionName:flags;"
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
-		if !strings.Contains(line, "type=") {
+		if !strings.Contains(line, ":") {
 			continue
 		}
-		// APFS 分区类型 GUID: 7C3457EF-0000-11AA-AA11-00306543ECAC
-		// 或者 type=131 (Apple APFS)
-		lower := strings.ToLower(line)
-		if !strings.Contains(lower, "7c3457ef") && !strings.Contains(lower, "apple apfs") && !strings.Contains(lower, "type=131") {
+		fields := strings.Split(line, ":")
+		if len(fields) < 6 {
 			continue
 		}
-
-		// 解析 start 和 size
-		startStr := extractFdiskField(line, "start")
-		sizeStr := extractFdiskField(line, "size")
-		if startStr == "" || sizeStr == "" {
+		// 检查文件系统类型是否包含 APFS
+		fsType := strings.ToLower(fields[4])
+		if !strings.Contains(fsType, "apfs") && !strings.Contains(fsType, "hfs") {
 			continue
 		}
 
-		// 用 dd 提取 APFS 分区
-		outFile := diskImage + ".apfs"
+		startSec := fields[1]
+		sizeSec := fields[3]
+		if startSec == "" || sizeSec == "" {
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "[parted] found %s partition: start=%s size=%s\n", fsType, startSec, sizeSec)
+
+		// 用 dd 提取分区
+		outFile := diskImage + ".part"
 		ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
-			"bs=512", "skip="+startStr, "count="+sizeStr, "conv=noerror,sync")
+			"bs=512", "skip="+startSec, "count="+sizeSec, "conv=noerror,sync")
 		if ddOut, err := ddCmd.CombinedOutput(); err != nil {
 			fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
 			continue
@@ -244,7 +248,7 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 		// 用 apfs-fuse 挂载提取的分区
 		cmd := exec.Command("apfs-fuse", "-o", "ro", outFile, mountPoint)
 		if output, err := cmd.CombinedOutput(); err == nil {
-			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted APFS partition -> %s\n", mountPoint)
+			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s partition -> %s\n", fsType, mountPoint)
 			defer func() {
 				if _, err := exec.LookPath("fusermount3"); err == nil {
 					exec.Command("fusermount3", "-u", mountPoint).Run()
@@ -257,22 +261,7 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 			fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
 		}
 	}
-	return fmt.Errorf("no APFS partition found in disk image")
-}
-
-// extractFdiskField 从 fdisk 输出行中提取字段值
-func extractFdiskField(line, field string) string {
-	// 格式: "start=12345, size=67890, type=..."
-	idx := strings.Index(line, field+"=")
-	if idx < 0 {
-		return ""
-	}
-	start := idx + len(field) + 1
-	end := start
-	for end < len(line) && line[end] != ',' && line[end] != ' ' {
-		end++
-	}
-	return line[start:end]
+	return fmt.Errorf("no APFS/HFS partition found in disk image")
 }
 
 // extractDmgApfsFuse 用 apfs-fuse 挂载 APFS DMG 并复制内容

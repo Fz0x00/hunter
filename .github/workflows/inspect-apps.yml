@@ -40,7 +40,7 @@ jobs:
         env:
           ONLY: ${{ github.event.inputs.only }}
         run: |
-          ARGS=(-db hunter.db -json inspect-results.json -electron-map electron-map.json -timeout 10m)
+          ARGS=(-db hunter.db -json inspect-results.json -electron-map electron-map.json -timeout 10m -concurrency 5)
           if [ -n "$ONLY" ]; then
             ARGS+=(-only "$ONLY")
           fi

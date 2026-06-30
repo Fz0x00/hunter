@@ -58,13 +58,14 @@ func runInspect(args []string) {
 func runInspectList(args []string) {
 	fs := flag.NewFlagSet("inspect-list", flag.ExitOnError)
 	var (
-		jsonOut string
-		dbPath  string
-		emPath  string
-		keep    bool
-		list    bool
-		only    string
-		timeout time.Duration
+		jsonOut     string
+		dbPath      string
+		emPath      string
+		keep        bool
+		list        bool
+		only        string
+		concurrency int
+		timeout     time.Duration
 	)
 	fs.StringVar(&jsonOut, "json", "", "write JSON report to path")
 	fs.StringVar(&dbPath, "db", "", "SQLite database path (stores scan history)")
@@ -72,6 +73,7 @@ func runInspectList(args []string) {
 	fs.BoolVar(&keep, "keep", false, "keep downloaded files")
 	fs.BoolVar(&list, "list", false, "only resolve download URLs, do not download")
 	fs.StringVar(&only, "only", "", "comma-separated app names to inspect (case-insensitive)")
+	fs.IntVar(&concurrency, "concurrency", 1, "number of apps to inspect in parallel")
 	fs.DurationVar(&timeout, "timeout", 10*time.Minute, "download timeout per app")
 	fs.Parse(args)
 
@@ -133,15 +135,58 @@ func runInspectList(args []string) {
 		}
 	}
 
-	var allApps []App
+	// 筛选要检测的应用
+	var toInspect []AppEntry
 	for _, entry := range reg.Apps {
 		if len(filter) > 0 && !filter[strings.ToLower(entry.Name)] {
 			continue
 		}
-		fmt.Fprintf(os.Stderr, "\n[inspect] === %s ===\n", entry.Name)
-		apps, err := doInspect(entry, emPath, keep, timeout)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "[error] %s: %v\n", entry.Name, err)
+		toInspect = append(toInspect, entry)
+	}
+
+	if concurrency <= 1 {
+		// 串行模式（默认，日志清晰）
+		var allApps []App
+		for _, entry := range toInspect {
+			fmt.Fprintf(os.Stderr, "\n[inspect] === %s ===\n", entry.Name)
+			apps, err := doInspect(entry, emPath, keep, timeout)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[error] %s: %v\n", entry.Name, err)
+				continue
+			}
+			if em == nil {
+				if m, _ := LoadElectronMap(emPath); m != nil {
+					em = m
+				}
+			}
+			allApps = append(allApps, apps...)
+			printTable(apps)
+		}
+		finishInspectList(allApps, fs.Arg(0), dbPath, jsonOut)
+		return
+	}
+
+	// 并行模式
+	type result struct {
+		entry AppEntry
+		apps  []App
+		err   error
+	}
+	results := make(chan result, len(toInspect))
+	sem := make(chan struct{}, concurrency)
+	for _, entry := range toInspect {
+		go func(e AppEntry) {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			apps, err := doInspectQuiet(e, emPath, keep, timeout)
+			results <- result{e, apps, err}
+		}(entry)
+	}
+	var allApps []App
+	for i := 0; i < len(toInspect); i++ {
+		r := <-results
+		if r.err != nil {
+			fmt.Fprintf(os.Stderr, "[error] %s: %v\n", r.entry.Name, r.err)
 			continue
 		}
 		if em == nil {
@@ -149,11 +194,15 @@ func runInspectList(args []string) {
 				em = m
 			}
 		}
-		allApps = append(allApps, apps...)
-		printTable(apps)
+		allApps = append(allApps, r.apps...)
+		fmt.Fprintf(os.Stderr, "[done] %s — %d app(s)\n", r.entry.Name, len(r.apps))
+		printTable(r.apps)
 	}
+	finishInspectList(allApps, fs.Arg(0), dbPath, jsonOut)
+}
 
-	result := newScanResult(allApps, "inspect-list", fs.Arg(0))
+func finishInspectList(allApps []App, scope, dbPath, jsonOut string) {
+	result := newScanResult(allApps, "inspect-list", scope)
 
 	if dbPath != "" {
 		db, err := OpenDB(dbPath)
@@ -177,6 +226,11 @@ func runInspectList(args []string) {
 		}
 		fmt.Fprintf(os.Stderr, "\n[report] JSON saved to %s (%d apps)\n", jsonOut, len(allApps))
 	}
+}
+
+// doInspectQuiet 静默版本的 doInspect（不输出进度日志），用于并行模式
+func doInspectQuiet(entry AppEntry, emPath string, keep bool, timeout time.Duration) ([]App, error) {
+	return doInspect(entry, emPath, keep, timeout)
 }
 
 func doInspect(entry AppEntry, emPath string, keep bool, timeout time.Duration) ([]App, error) {

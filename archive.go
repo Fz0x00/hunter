@@ -186,9 +186,15 @@ func extractDmg7z(dmgPath, destDir string) error {
 				 if apfsErr := extractAPFSFromDiskImage(fullPath, destDir); apfsErr == nil {
 					 os.Remove(fullPath) // 清理原始磁盘镜像
 					 return nil
+				 } else {
+					 fmt.Fprintf(os.Stderr, "[7z] APFS extraction failed: %v\n", apfsErr)
 				 }
 			 }
 		 }
+		}
+		fmt.Fprintf(os.Stderr, "[7z] no raw disk image found, checking entries:\n")
+		for _, e := range entries {
+			fmt.Fprintf(os.Stderr, "  - %s (dir=%v)\n", e.Name(), e.IsDir())
 		}
 		return nil
 	}

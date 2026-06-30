@@ -314,39 +314,45 @@ func extractDmgApfsFuse(dmgPath, destDir string) error {
 	return fmt.Errorf("APFS extraction failed (FUSE unavailable)")
 }
 
-// extractAPFSPartition 从 GPT 磁盘镜像中提取 APFS 分区
+// extractAPFSPartition 从磁盘镜像中提取 APFS 分区
 func extractAPFSPartition(diskImage string) string {
-	// 用 fdisk 读取分区表，找到 APFS 分区（类型 7C3457EF-0000-11AA-AA11-00306543ECAC）
-	cmd := exec.Command("fdisk", "-l", "-o", "Start,Size,Type", diskImage)
+	// 用 parted 找 APFS 分区
+	cmd := exec.Command("parted", "-s", "-m", diskImage, "unit", "s", "print")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return ""
 	}
-	fmt.Fprintf(os.Stderr, "[fdisk] %s\n", output)
+	fmt.Fprintf(os.Stderr, "[parted] %s\n", output)
 
-	// 解析输出找 APFS 分区
-	// APFS 分区类型 GUID: 7C3457EF-0000-11AA-AA11-00306543ECAC
-	// 在 fdisk 输出中显示为 "Apple APFS" 或类似
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
-		lower := strings.ToLower(line)
-		if strings.Contains(lower, "apfs") || strings.Contains(lower, "7c3457ef") {
-			// 解析 Start 和 Size
-			fields := strings.Fields(line)
-			if len(fields) >= 2 {
-				startSector := fields[0]
-				sizeSectors := fields[1]
-				// 用 dd 提取分区
-				outFile := diskImage + ".apfs"
-				ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
-					"bs=512", "skip="+startSector, "count="+sizeSectors, "conv=noerror,sync")
-				if ddOut, err := ddCmd.CombinedOutput(); err == nil {
-					fmt.Fprintf(os.Stderr, "[dd] extracted APFS partition -> %s\n", outFile)
-					return outFile
-				} else {
-					fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
-				}
-			}
+		if !strings.Contains(line, ":") {
+			continue
+		}
+		fields := strings.Split(line, ":")
+		if len(fields) < 6 {
+			continue
+		}
+		fsType := strings.ToLower(fields[4])
+		if !strings.Contains(fsType, "apfs") && !strings.Contains(fsType, "hfs") {
+			continue
+		}
+
+		startSec := fields[1]
+		sizeSec := fields[3]
+		if startSec == "" || sizeSec == "" {
+			continue
+		}
+
+		// 用 dd 提取分区
+		outFile := diskImage + ".apfs"
+		ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
+			"bs=512", "skip="+startSec, "count="+sizeSec, "conv=noerror,sync")
+		if ddOut, err := ddCmd.CombinedOutput(); err == nil {
+			fmt.Fprintf(os.Stderr, "[dd] extracted APFS partition -> %s\n", outFile)
+			return outFile
+		} else {
+			fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
 		}
 	}
 	return ""

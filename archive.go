@@ -190,10 +190,20 @@ func extractDmgApfsFuse(dmgPath, destDir string) error {
 
 	// apfs-fuse 可以直接挂载 DMG/disk image，自动检测 APFS 分区
 	cmd := exec.Command("apfs-fuse", "-o", "ro", dmgPath, mountPoint)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("apfs-fuse mount: %w\n%s", err, output)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
+		return fmt.Errorf("apfs-fuse mount: %w", err)
 	}
-	defer exec.Command("fusermount", "-u", mountPoint).Run()
+	fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s -> %s\n", dmgPath, mountPoint)
+	defer func() {
+		// Try fusermount3 first (FUSE3), then fusermount (FUSE2)
+		if _, err := exec.LookPath("fusermount3"); err == nil {
+			exec.Command("fusermount3", "-u", mountPoint).Run()
+		} else {
+			exec.Command("fusermount", "-u", mountPoint).Run()
+		}
+	}()
 
 	return copyDirContents(mountPoint, destDir)
 }

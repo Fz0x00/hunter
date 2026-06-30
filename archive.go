@@ -220,10 +220,10 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 	}
 	defer os.RemoveAll(mountPoint)
 
-	// 先尝试直接用 apfs-fuse 挂载（文件可能本身就是 APFS 分区）
+	// 直接用 apfs-fuse 挂载（支持 APFS 分区和完整磁盘镜像）
 	cmd := exec.Command("apfs-fuse", "-o", "ro", diskImage, mountPoint)
-	if _, err := cmd.CombinedOutput(); err == nil {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted raw APFS -> %s\n", mountPoint)
+	if output, err := cmd.CombinedOutput(); err == nil {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted -> %s\n", mountPoint)
 		defer func() {
 			if _, err := exec.LookPath("fusermount3"); err == nil {
 				exec.Command("fusermount3", "-u", mountPoint).Run()
@@ -233,67 +233,13 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 		}()
 		return copyDirContents(mountPoint, destDir)
 	} else {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] direct mount failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
 	}
 
-	// 如果直接挂载失败，尝试用 parted 找分区偏移（处理完整磁盘镜像）
-	cmd = exec.Command("parted", "-s", "-m", diskImage, "unit", "s", "print")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("parted: %w\n%s", err, output)
-	}
-
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if !strings.Contains(line, ":") {
-			continue
-		}
-		fields := strings.Split(line, ":")
-		if len(fields) < 6 {
-			continue
-		}
-		fsType := strings.ToLower(fields[4])
-		if !strings.Contains(fsType, "apfs") && !strings.Contains(fsType, "hfs") {
-			continue
-		}
-
-		startSec := fields[1]
-		sizeSec := fields[3]
-		if startSec == "" || sizeSec == "" {
-			continue
-		}
-
-		fmt.Fprintf(os.Stderr, "[parted] found %s partition: start=%s size=%s\n", fsType, startSec, sizeSec)
-
-		outFile := diskImage + ".part"
-		ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
-			"bs=512", "skip="+startSec, "count="+sizeSec, "conv=noerror,sync")
-		if ddOut, err := ddCmd.CombinedOutput(); err != nil {
-			fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
-			continue
-		}
-		defer os.Remove(outFile)
-
-		cmd := exec.Command("apfs-fuse", "-o", "ro", outFile, mountPoint)
-		if output, err := cmd.CombinedOutput(); err == nil {
-			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s partition -> %s\n", fsType, mountPoint)
-			defer func() {
-				if _, err := exec.LookPath("fusermount3"); err == nil {
-					exec.Command("fusermount3", "-u", mountPoint).Run()
-				} else {
-					exec.Command("fusermount", "-u", mountPoint).Run()
-				}
-			}()
-			return copyDirContents(mountPoint, destDir)
-		} else {
-			fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
-		}
-	}
-	return fmt.Errorf("no APFS/HFS partition found in disk image")
+	return fmt.Errorf("APFS extraction failed")
 }
 
 // extractDmgApfsFuse 用 apfs-fuse 挂载 APFS DMG 并复制内容
-// 如果 FUSE 不可用，尝试用 dd 提取 APFS 分区后挂载
 func extractDmgApfsFuse(dmgPath, destDir string) error {
 	mountPoint, err := os.MkdirTemp("", "hunter-apfs-*")
 	if err != nil {
@@ -301,89 +247,21 @@ func extractDmgApfsFuse(dmgPath, destDir string) error {
 	}
 	defer os.RemoveAll(mountPoint)
 
-	// 方案 1: 尝试 apfs-fuse 直接挂载（需要 FUSE）
 	cmd := exec.Command("apfs-fuse", "-o", "ro", dmgPath, mountPoint)
-	if _, err := cmd.CombinedOutput(); err == nil {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s -> %s\n", dmgPath, mountPoint)
-		defer func() {
-			if _, err := exec.LookPath("fusermount3"); err == nil {
-				exec.Command("fusermount3", "-u", mountPoint).Run()
-			} else {
-				exec.Command("fusermount", "-u", mountPoint).Run()
-			}
-		}()
-		return copyDirContents(mountPoint, destDir)
-	} else {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] direct mount failed: %v\n", err)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("apfs-fuse: %w\n%s", err, output)
 	}
 
-	// 方案 2: 提取 APFS 分区后用 -s 挂载（处理带分区表的磁盘镜像）
-	// 微信 DMG 是 GPT 分区表 + APFS 分区，需要找到 APFS 分区的偏移
-	apfsPartition := extractAPFSPartition(dmgPath)
-	if apfsPartition != "" {
-		fmt.Fprintf(os.Stderr, "[apfs-fuse] trying partition at %s\n", apfsPartition)
-		cmd := exec.Command("apfs-fuse", "-o", "ro", apfsPartition, mountPoint)
-		if output, err := cmd.CombinedOutput(); err == nil {
-			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted partition -> %s\n", mountPoint)
-			defer func() {
-				if _, err := exec.LookPath("fusermount3"); err == nil {
-					exec.Command("fusermount3", "-u", mountPoint).Run()
-				} else {
-					exec.Command("fusermount", "-u", mountPoint).Run()
-				}
-			}()
-			return copyDirContents(mountPoint, destDir)
+	fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s -> %s\n", dmgPath, mountPoint)
+	defer func() {
+		if _, err := exec.LookPath("fusermount3"); err == nil {
+			exec.Command("fusermount3", "-u", mountPoint).Run()
 		} else {
-			fmt.Fprintf(os.Stderr, "[apfs-fuse] partition mount failed: %v\n%s\n", err, output)
-			os.Remove(apfsPartition)
+			exec.Command("fusermount", "-u", mountPoint).Run()
 		}
-	}
+	}()
 
-	return fmt.Errorf("APFS extraction failed (FUSE unavailable)")
-}
-
-// extractAPFSPartition 从磁盘镜像中提取 APFS 分区
-func extractAPFSPartition(diskImage string) string {
-	// 用 parted 找 APFS 分区
-	cmd := exec.Command("parted", "-s", "-m", diskImage, "unit", "s", "print")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return ""
-	}
-	fmt.Fprintf(os.Stderr, "[parted] %s\n", output)
-
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if !strings.Contains(line, ":") {
-			continue
-		}
-		fields := strings.Split(line, ":")
-		if len(fields) < 6 {
-			continue
-		}
-		fsType := strings.ToLower(fields[4])
-		if !strings.Contains(fsType, "apfs") && !strings.Contains(fsType, "hfs") {
-			continue
-		}
-
-		startSec := fields[1]
-		sizeSec := fields[3]
-		if startSec == "" || sizeSec == "" {
-			continue
-		}
-
-		// 用 dd 提取分区
-		outFile := diskImage + ".apfs"
-		ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
-			"bs=512", "skip="+startSec, "count="+sizeSec, "conv=noerror,sync")
-		if ddOut, err := ddCmd.CombinedOutput(); err == nil {
-			fmt.Fprintf(os.Stderr, "[dd] extracted APFS partition -> %s\n", outFile)
-			return outFile
-		} else {
-			fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
-		}
-	}
-	return ""
+	return copyDirContents(mountPoint, destDir)
 }
 
 func extractPkg(pkgPath, destDir string) error {

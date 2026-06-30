@@ -16,7 +16,10 @@ func extractArchive(archivePath, destDir string) error {
 		return err
 	}
 
-	switch detectFormat(archivePath) {
+	format := detectFormat(archivePath)
+	fmt.Fprintf(os.Stderr, "[archive] format=%s file=%s\n", format, filepath.Base(archivePath))
+
+	switch format {
 	case "zip":
 		return extractZip(archivePath, destDir)
 	case "dmg":

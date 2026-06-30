@@ -34,10 +34,11 @@ jobs:
 
       - name: Inspect registered apps
         run: |
-          ./hunter inspect-list apps.json \
+          ./hunter inspect-list \
             -json inspect-results.json \
             -electron-map electron-map.json \
-            -timeout 10m 2>&1
+            -timeout 10m \
+            apps.json 2>&1
 
       - name: Upload results
         uses: actions/upload-artifact@v4

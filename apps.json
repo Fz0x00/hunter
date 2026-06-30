@@ -177,6 +177,60 @@
       "github": "RocketChat/Rocket.Chat.Electron",
       "asset_pattern": "^rocketchat-[\\d.]+-mac\\.dmg$",
       "homepage": "https://rocket.chat"
+    },
+    {
+      "name": "Bitwarden",
+      "publisher": "Bitwarden",
+      "github": "bitwarden/clients",
+      "asset_pattern": "^Bitwarden-[\\d.]+-universal-mac\\.zip$",
+      "homepage": "https://bitwarden.com"
+    },
+    {
+      "name": "Mailspring",
+      "publisher": "Foundry376",
+      "github": "Foundry376/Mailspring",
+      "asset_pattern": "^Mailspring-AppleSilicon\\.zip$",
+      "homepage": "https://getmailspring.com"
+    },
+    {
+      "name": "SiYuan",
+      "publisher": "b3log",
+      "github": "siyuan-note/siyuan",
+      "asset_pattern": "^siyuan-[\\d.]+-mac-arm64\\.dmg$",
+      "homepage": "https://b3log.org/siyuan"
+    },
+    {
+      "name": "AFFiNE",
+      "publisher": "toeverything",
+      "github": "toeverything/AFFiNE",
+      "asset_pattern": "^affine-[\\d.]+-stable-macos-arm64\\.zip$",
+      "homepage": "https://affine.pro"
+    },
+    {
+      "name": "Motrix",
+      "publisher": "agalwood",
+      "github": "agalwood/Motrix",
+      "asset_pattern": "^Motrix-[\\d.]+-arm64-mac\\.zip$",
+      "homepage": "https://motrix.app"
+    },
+    {
+      "name": "Pear Desktop",
+      "publisher": "pear-devs",
+      "github": "pear-devs/pear-desktop",
+      "asset_pattern": "^YouTube-Music-[\\d.]+-arm64\\.dmg$",
+      "homepage": "https://github.com/pear-devs/pear-desktop"
+    },
+    {
+      "name": "Framer",
+      "publisher": "Framer",
+      "url": "https://updates.framer.com/electron/darwin/arm64/Framer.zip",
+      "homepage": "https://framer.com"
+    },
+    {
+      "name": "Replit",
+      "publisher": "Replit",
+      "url": "https://desktop.replit.com/download/mac",
+      "homepage": "https://replit.com"
     }
   ]
 }

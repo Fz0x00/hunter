@@ -37,18 +37,14 @@ jobs:
         run: go build -o hunter .
 
       - name: Inspect registered apps
+        env:
+          ONLY: ${{ github.event.inputs.only }}
         run: |
-          ONLY_FLAG=""
-          if [ -n "${{ github.event.inputs.only }}" ]; then
-            ONLY_FLAG="-only ${{ github.event.inputs.only }}"
+          ARGS=(-db hunter.db -json inspect-results.json -electron-map electron-map.json -timeout 10m)
+          if [ -n "$ONLY" ]; then
+            ARGS+=(-only "$ONLY")
           fi
-          ./hunter inspect-list \
-            -db hunter.db \
-            -json inspect-results.json \
-            -electron-map electron-map.json \
-            -timeout 10m \
-            $ONLY_FLAG \
-            apps.json 2>&1
+          ./hunter inspect-list "${ARGS[@]}" apps.json 2>&1
 
       - name: Show database stats
         run: ./hunter query -db hunter.db -stats 2>&1

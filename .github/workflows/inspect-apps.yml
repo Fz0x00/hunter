@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   inspect:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -23,6 +23,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.26'
+
+      - name: Install 7zip (for DMG extraction)
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
       - name: Download electron-map.json
         run: |

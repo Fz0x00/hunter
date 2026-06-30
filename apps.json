@@ -238,6 +238,24 @@
       "publisher": "Replit",
       "url": "https://desktop.replit.com/download/mac",
       "homepage": "https://replit.com"
+    },
+    {
+      "name": "QQ",
+      "publisher": "Tencent",
+      "homepage": "https://im.qq.com/mac/",
+      "dynamic": true
+    },
+    {
+      "name": "Doubao",
+      "publisher": "ByteDance",
+      "homepage": "https://www.doubao.com/download/",
+      "dynamic": true
+    },
+    {
+      "name": "BlueStacks",
+      "publisher": "BlueStacks",
+      "homepage": "https://www.bluestacks.com/download.html",
+      "dynamic": true
     }
   ]
 }

@@ -65,6 +65,7 @@ func runInspectList(args []string) {
 		list           bool
 		only           string
 		platformFilter string
+		dynamicURLFile string
 		concurrency    int
 		timeout        time.Duration
 	)
@@ -75,6 +76,7 @@ func runInspectList(args []string) {
 	fs.BoolVar(&list, "list", false, "only resolve download URLs, do not download")
 	fs.StringVar(&only, "only", "", "comma-separated app names to inspect (case-insensitive)")
 	fs.StringVar(&platformFilter, "platform", "", "filter by platform requirement: macos|linux|any (empty=all)")
+	fs.StringVar(&dynamicURLFile, "dynamic-urls", "", "path to dynamic-urls.json (playwright collector output)")
 	fs.IntVar(&concurrency, "concurrency", 1, "number of apps to inspect in parallel")
 	fs.DurationVar(&timeout, "timeout", 10*time.Minute, "download timeout per app")
 	fs.Parse(args)
@@ -88,6 +90,14 @@ func runInspectList(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[error] %v\n", err)
 		os.Exit(1)
+	}
+
+	// 加载 playwright 动态 URL 收集器输出
+	if dynamicURLFile != "" {
+		loadDynamicURLs(dynamicURLFile)
+		if dynamicURLs != nil {
+			fmt.Fprintf(os.Stderr, "[dynamic] loaded %d URL(s) from %s\n", len(dynamicURLs), dynamicURLFile)
+		}
 	}
 
 	// 过滤要检测的应用

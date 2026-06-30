@@ -19,10 +19,38 @@ type AppEntry struct {
 	ReleaseFeed  string `json:"release_feed,omitempty"`
 	Homepage     string `json:"homepage,omitempty"`
 	Platform     string `json:"platform,omitempty"` // "macos" = needs hdiutil; empty/"any" = any OS
+	Dynamic      bool   `json:"dynamic,omitempty"`  // true = URL from dynamic-urls.json
 }
 
 type AppRegistry struct {
 	Apps []AppEntry `json:"apps"`
+}
+
+// dynamicURLMap holds URLs collected by the playwright URL collector
+// (scripts/collect_urls.py → dynamic-urls.json). Used for apps whose
+// download pages are JS-rendered and cannot be resolved statically.
+type dynamicURLFile struct {
+	Updated string            `json:"updated"`
+	URLs    map[string]string `json:"urls"`
+}
+
+var dynamicURLs map[string]string
+
+// loadDynamicURLs loads dynamic-urls.json from the given path (optional).
+// If path is empty or file missing, dynamicURLs stays nil (no-op).
+func loadDynamicURLs(path string) {
+	if path == "" {
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	var f dynamicURLFile
+	if err := json.Unmarshal(data, &f); err != nil {
+		return
+	}
+	dynamicURLs = f.URLs
 }
 
 func loadRegistry(path string) (*AppRegistry, error) {
@@ -90,6 +118,12 @@ func resolveReleaseFeed(feedURL string) (string, string, error) {
 }
 
 func (e *AppEntry) resolveDownloadURL() (string, string, error) {
+	// Dynamic apps: URL from playwright collector (dynamic-urls.json)
+	if e.Dynamic && dynamicURLs != nil {
+		if u, ok := dynamicURLs[e.Name]; ok && u != "" {
+			return u, "", nil
+		}
+	}
 	if e.URL != "" {
 		return e.URL, "", nil
 	}

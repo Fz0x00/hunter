@@ -1,0 +1,48 @@
+name: Collect URLs
+
+# 定期用 Playwright 无头浏览器获取 JS 渲染下载页面的真实下载链接。
+# 输出 dynamic-urls.json 并 commit 到 repo，供 inspect-apps workflow 使用。
+
+on:
+  schedule:
+    # 每天 UTC 06:00（北京时间 14:00）
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-urls
+  cancel-in-progress: true
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Collect download URLs
+        run: python scripts/collect_urls.py
+
+      - name: Commit dynamic-urls.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dynamic-urls.json
+          if git diff --cached --quiet; then
+            echo "No changes to dynamic-urls.json"
+          else
+            git commit -m "chore: update dynamic download URLs [skip ci]"
+            git push
+          fi

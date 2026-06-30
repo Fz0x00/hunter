@@ -30,8 +30,17 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Install 7zip and xz (for DMG/archive extraction)
-        run: sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils
+      - name: Install 7zip, xz, and apfs-fuse (for DMG/archive extraction)
+        run: |
+          sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils \
+            fuse3 libfuse3-dev bzip2 libbz2-dev cmake g++ git libattr1-dev zlib1g-dev
+          cd /tmp
+          git clone --depth 1 https://github.com/sgan81/apfs-fuse.git
+          cd apfs-fuse && git submodule update --init
+          mkdir build && cd build
+          cmake -DUSE_FUSE3=ON .. && make -j$(nproc)
+          sudo cp apfs-fuse /usr/local/bin/
+          echo "apfs-fuse installed: $(apfs-fuse --help 2>&1 | head -1 || echo OK)"
 
       - name: Build hunter
         run: go build -o hunter .

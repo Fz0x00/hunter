@@ -23,6 +23,9 @@ func main() {
 		case "version-check":
 			runVersionCheck(os.Args[2:])
 			return
+		case "risk":
+			runRisk(os.Args[2:])
+			return
 		case "query":
 			runQuery(os.Args[2:])
 			return
@@ -49,6 +52,7 @@ Commands:
   inspect <url>                    Download & inspect a single app package
   inspect-list <apps.json>         Batch inspect from a JSON app registry
   version-check <apps.json>        Resolve URLs, compare with versions.json, report changed
+  risk                             Match apps against chromium-intel CVE database
   query                            Query scan history from SQLite database
   version                          Show version
 

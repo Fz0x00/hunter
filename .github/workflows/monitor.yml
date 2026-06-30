@@ -103,6 +103,17 @@ jobs:
         if: steps.vc.outputs.changed != ''
         run: ./hunter query -db hunter.db -old 130 2>&1
 
+      - name: Download CVE database
+        run: |
+          curl -sL -o risk-report.json \
+            "https://raw.githubusercontent.com/Fz0x00/chromium-intel/main/data/risk-report.json"
+          test -s risk-report.json && echo "CVE database downloaded" || echo "WARNING: download failed"
+
+      - name: Match apps against CVE database
+        run: |
+          ./hunter risk -db hunter.db -risk-report risk-report.json \
+            -json risk-assessment.json 2>&1 || true
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,3 +124,4 @@ jobs:
             hunter.db
             versions.json
             dynamic-urls.json
+            risk-assessment.json

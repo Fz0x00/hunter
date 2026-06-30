@@ -154,18 +154,27 @@ func extractDmgMac(dmgPath, destDir string) error {
 }
 
 func extractDmg7z(dmgPath, destDir string) error {
+	fmt.Fprintf(os.Stderr, "[dmg7z] start: %s\n", dmgPath)
+
 	// 优先尝试 apfs-fuse（支持 APFS 磁盘镜像）
 	if _, err := exec.LookPath("apfs-fuse"); err == nil {
+		fmt.Fprintf(os.Stderr, "[dmg7z] trying apfs-fuse...\n")
 		if err := extractDmgApfsFuse(dmgPath, destDir); err == nil {
 			return nil
+		} else {
+			fmt.Fprintf(os.Stderr, "[dmg7z] apfs-fuse failed: %v\n", err)
 		}
+	} else {
+		fmt.Fprintf(os.Stderr, "[dmg7z] apfs-fuse not found, skipping\n")
 	}
 
 	// 回退到 7z（支持 HFS+ DMG 或 XZ 压缩的磁盘镜像）
 	for _, tool := range []string{"7z", "7za", "7zr"} {
 		if _, err := exec.LookPath(tool); err != nil {
+			fmt.Fprintf(os.Stderr, "[dmg7z] %s not found\n", tool)
 			continue
 		}
+		fmt.Fprintf(os.Stderr, "[dmg7z] trying %s...\n", tool)
 		cmd := exec.Command(tool, "x", dmgPath, "-o"+destDir, "-y")
 		output, err := cmd.CombinedOutput()
 		if err != nil {

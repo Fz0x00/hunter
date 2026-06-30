@@ -222,11 +222,12 @@ func extractCompressed(archivePath, destDir string, format string) error {
 	switch format {
 	case "xz":
 		// xz requires .xz suffix, use -c to decompress to stdout
+		// Note: xz may return exit code 1 for multi-stream files even on success
 		outFile := strings.TrimSuffix(archivePath, filepath.Ext(archivePath))
-		cmd = exec.Command("sh", "-c", fmt.Sprintf("xz -dc %q > %q", archivePath, outFile))
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("xz -dc %q > %q; test -s %q", archivePath, outFile, outFile))
 	case "gz":
 		outFile := strings.TrimSuffix(archivePath, filepath.Ext(archivePath))
-		cmd = exec.Command("sh", "-c", fmt.Sprintf("gzip -dc %q > %q", archivePath, outFile))
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("gzip -dc %q > %q; test -s %q", archivePath, outFile, outFile))
 	case "7z":
 		for _, tool := range []string{"7z", "7za", "7zr"} {
 			if _, err := exec.LookPath(tool); err == nil {

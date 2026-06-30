@@ -30,24 +30,8 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Enable FUSE and install dependencies
-        run: |
-          # Enable FUSE kernel module and device
-          sudo modprobe fuse || true
-          sudo mknod /dev/fuse c 10 229 || true
-          sudo chmod 666 /dev/fuse || true
-          # Install packages
-          sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils parted \
-            fuse3 libfuse3-dev bzip2 libbz2-dev cmake g++ git libattr1-dev zlib1g-dev
-          # Build apfs-fuse
-          cd /tmp
-          git clone --depth 1 https://github.com/sgan81/apfs-fuse.git
-          cd apfs-fuse && git submodule update --init
-          mkdir build && cd build
-          cmake -DUSE_FUSE3=ON .. && make -j$(nproc)
-          sudo cp apfs-fuse apfs-dump /usr/local/bin/
-          echo "FUSE available: $(ls -la /dev/fuse 2>&1)"
-          echo "apfs-fuse: $(which apfs-fuse)"
+      - name: Install 7zip, xz, and parted (for DMG/archive extraction)
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full xz-utils parted
 
       - name: Build hunter
         run: go build -o hunter .

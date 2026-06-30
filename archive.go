@@ -220,15 +220,29 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 	}
 	defer os.RemoveAll(mountPoint)
 
-	// 用 parted 找 APFS 分区偏移（支持 GPT 和 APM）
-	cmd := exec.Command("parted", "-s", "-m", diskImage, "unit", "s", "print")
+	// 先尝试直接用 apfs-fuse 挂载（文件可能本身就是 APFS 分区）
+	cmd := exec.Command("apfs-fuse", "-o", "ro", diskImage, mountPoint)
+	if _, err := cmd.CombinedOutput(); err == nil {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted raw APFS -> %s\n", mountPoint)
+		defer func() {
+			if _, err := exec.LookPath("fusermount3"); err == nil {
+				exec.Command("fusermount3", "-u", mountPoint).Run()
+			} else {
+				exec.Command("fusermount", "-u", mountPoint).Run()
+			}
+		}()
+		return copyDirContents(mountPoint, destDir)
+	} else {
+		fmt.Fprintf(os.Stderr, "[apfs-fuse] direct mount failed: %v\n", err)
+	}
+
+	// 如果直接挂载失败，尝试用 parted 找分区偏移（处理完整磁盘镜像）
+	cmd = exec.Command("parted", "-s", "-m", diskImage, "unit", "s", "print")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("parted: %w\n%s", err, output)
 	}
 
-	// 解析 parted -m 输出找 APFS 分区
-	// 格式: "partNum:startSec:endSec:sizeSec:filesystemType:partitionName:flags;"
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		if !strings.Contains(line, ":") {
@@ -238,7 +252,6 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 		if len(fields) < 6 {
 			continue
 		}
-		// 检查文件系统类型是否包含 APFS
 		fsType := strings.ToLower(fields[4])
 		if !strings.Contains(fsType, "apfs") && !strings.Contains(fsType, "hfs") {
 			continue
@@ -252,7 +265,6 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 
 		fmt.Fprintf(os.Stderr, "[parted] found %s partition: start=%s size=%s\n", fsType, startSec, sizeSec)
 
-		// 用 dd 提取分区
 		outFile := diskImage + ".part"
 		ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
 			"bs=512", "skip="+startSec, "count="+sizeSec, "conv=noerror,sync")
@@ -262,7 +274,6 @@ func extractAPFSFromDiskImage(diskImage, destDir string) error {
 		}
 		defer os.Remove(outFile)
 
-		// 用 apfs-fuse 挂载提取的分区
 		cmd := exec.Command("apfs-fuse", "-o", "ro", outFile, mountPoint)
 		if output, err := cmd.CombinedOutput(); err == nil {
 			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted %s partition -> %s\n", fsType, mountPoint)

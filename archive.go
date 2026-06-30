@@ -215,9 +215,12 @@ func extractCompressed(archivePath, destDir string, format string) error {
 	var cmd *exec.Cmd
 	switch format {
 	case "xz":
-		cmd = exec.Command("xz", "-dk", archivePath) // -d decompress, -k keep original
+		// xz requires .xz suffix, use -c to decompress to stdout
+		outFile := strings.TrimSuffix(archivePath, filepath.Ext(archivePath))
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("xz -dc %q > %q", archivePath, outFile))
 	case "gz":
-		cmd = exec.Command("gzip", "-dk", archivePath) // -d decompress, -k keep original
+		outFile := strings.TrimSuffix(archivePath, filepath.Ext(archivePath))
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("gzip -dc %q > %q", archivePath, outFile))
 	case "7z":
 		for _, tool := range []string{"7z", "7za", "7zr"} {
 			if _, err := exec.LookPath(tool); err == nil {

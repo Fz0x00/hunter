@@ -156,10 +156,9 @@ func extractDmg7z(dmgPath, destDir string) error {
 		if err := extractDmgApfsFuse(dmgPath, destDir); err == nil {
 			return nil
 		}
-		// apfs-fuse 失败时 fallthrough 到 7z
 	}
 
-	// 回退到 7z（支持 HFS+ DMG）
+	// 回退到 7z（支持 HFS+ DMG 或 XZ 压缩的磁盘镜像）
 	for _, tool := range []string{"7z", "7za", "7zr"} {
 		if _, err := exec.LookPath(tool); err != nil {
 			continue
@@ -175,9 +174,105 @@ func extractDmg7z(dmgPath, destDir string) error {
 			}
 			return fmt.Errorf("%s: %w\n%s", tool, err, output)
 		}
+
+		// 7z 提取后检查：如果产物是原始磁盘镜像（非 .app），需要进一步提取 APFS
+		entries, _ := os.ReadDir(destDir)
+		for _, e := range entries {
+		 fullPath := filepath.Join(destDir, e.Name())
+		 if !e.IsDir() && !strings.HasSuffix(e.Name(), ".app") {
+			 // 可能是 7z 从 XZ 中提取的原始磁盘镜像
+			 if info, err := os.Stat(fullPath); err == nil && info.Size() > 1024*1024 {
+				 fmt.Fprintf(os.Stderr, "[7z] extracted raw disk image: %s (%d MB)\n", e.Name(), info.Size()/(1024*1024))
+				 if apfsErr := extractAPFSFromDiskImage(fullPath, destDir); apfsErr == nil {
+					 os.Remove(fullPath) // 清理原始磁盘镜像
+					 return nil
+				 }
+			 }
+		 }
+		}
 		return nil
 	}
 	return fmt.Errorf("7z not found — install p7zip to extract DMG on %s", runtime.GOOS)
+}
+
+// extractAPFSFromDiskImage 从原始磁盘镜像中提取 APFS 分区内容
+func extractAPFSFromDiskImage(diskImage, destDir string) error {
+	mountPoint, err := os.MkdirTemp("", "hunter-apfs-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(mountPoint)
+
+	// 用 fdisk 找 APFS 分区偏移
+	cmd := exec.Command("fdisk", "-d", diskImage)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("fdisk: %w", err)
+	}
+
+	// 解析 fdisk -d 输出找 APFS 分区
+	// 输出格式: "start=..., size=..., type=..."
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if !strings.Contains(line, "type=") {
+			continue
+		}
+		// APFS 分区类型 GUID: 7C3457EF-0000-11AA-AA11-00306543ECAC
+		// 或者 type=131 (Apple APFS)
+		lower := strings.ToLower(line)
+		if !strings.Contains(lower, "7c3457ef") && !strings.Contains(lower, "apple apfs") && !strings.Contains(lower, "type=131") {
+			continue
+		}
+
+		// 解析 start 和 size
+		startStr := extractFdiskField(line, "start")
+		sizeStr := extractFdiskField(line, "size")
+		if startStr == "" || sizeStr == "" {
+			continue
+		}
+
+		// 用 dd 提取 APFS 分区
+		outFile := diskImage + ".apfs"
+		ddCmd := exec.Command("dd", "if="+diskImage, "of="+outFile,
+			"bs=512", "skip="+startStr, "count="+sizeStr, "conv=noerror,sync")
+		if ddOut, err := ddCmd.CombinedOutput(); err != nil {
+			fmt.Fprintf(os.Stderr, "[dd] failed: %s\n", ddOut)
+			continue
+		}
+		defer os.Remove(outFile)
+
+		// 用 apfs-fuse 挂载提取的分区
+		cmd := exec.Command("apfs-fuse", "-o", "ro", outFile, mountPoint)
+		if output, err := cmd.CombinedOutput(); err == nil {
+			fmt.Fprintf(os.Stderr, "[apfs-fuse] mounted APFS partition -> %s\n", mountPoint)
+			defer func() {
+				if _, err := exec.LookPath("fusermount3"); err == nil {
+					exec.Command("fusermount3", "-u", mountPoint).Run()
+				} else {
+					exec.Command("fusermount", "-u", mountPoint).Run()
+				}
+			}()
+			return copyDirContents(mountPoint, destDir)
+		} else {
+			fmt.Fprintf(os.Stderr, "[apfs-fuse] mount failed: %v\n%s\n", err, output)
+		}
+	}
+	return fmt.Errorf("no APFS partition found in disk image")
+}
+
+// extractFdiskField 从 fdisk 输出行中提取字段值
+func extractFdiskField(line, field string) string {
+	// 格式: "start=12345, size=67890, type=..."
+	idx := strings.Index(line, field+"=")
+	if idx < 0 {
+		return ""
+	}
+	start := idx + len(field) + 1
+	end := start
+	for end < len(line) && line[end] != ',' && line[end] != ' ' {
+		end++
+	}
+	return line[start:end]
 }
 
 // extractDmgApfsFuse 用 apfs-fuse 挂载 APFS DMG 并复制内容

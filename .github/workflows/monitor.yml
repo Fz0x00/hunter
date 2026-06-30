@@ -114,6 +114,66 @@ jobs:
           ./hunter risk -db hunter.db -risk-report risk-report.json \
             -json risk-assessment.json 2>&1 || true
 
+      - name: Upload assets to chromium-intel
+        if: steps.vc.outputs.changed != '' && steps.vc.outputs.changed != 'none'
+        env:
+          INTEL_TOKEN: ${{ secrets.INTEL_REPO_TOKEN }}
+        run: |
+          if [ -z "$INTEL_TOKEN" ]; then
+            echo "INTEL_REPO_TOKEN not set, skipping"
+            exit 0
+          fi
+          # Clone intel repo, update assets.json, push
+          git clone --depth 1 "https://x-access-token:${INTEL_TOKEN}@github.com/Fz0x00/chromium-intel.git" /tmp/intel
+          # Merge local + CI scan results into assets.json
+          python3 - << 'PYEOF'
+          import json
+          # Load CI results from inspect
+          ci_apps = []
+          try:
+              ci_apps = json.load(open('inspect-results.json')).get('apps', [])
+          except: pass
+
+          # Load local scan if available (from artifact or previous)
+          local_apps = []
+          try:
+              local_apps = json.load(open('local-scan.json')).get('apps', [])
+          except: pass
+
+          # Deduplicate by app_name (CI takes priority)
+          seen = set()
+          merged = []
+          for a in ci_apps + local_apps:
+              name = a.get('app_name', a.get('name', ''))
+              if name in seen:
+                  continue
+              seen.add(name)
+              merged.append(a)
+
+          output = {
+              'scan_time': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'source': 'hunter-ci',
+              'platform': 'mixed',
+              'total_apps': len(merged),
+              'apps': merged,
+          }
+          with open('/tmp/intel/data/assets.json', 'w') as f:
+              json.dump(output, f, ensure_ascii=False, indent=2)
+          print(f"Wrote {len(merged)} apps to assets.json")
+          PYEOF
+
+          cd /tmp/intel
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/assets.json
+          if git diff --cached --quiet; then
+            echo "No asset changes"
+          else
+            git commit -m "chore: update assets from hunter monitor"
+            git push
+            echo "Pushed assets to chromium-intel (triggers rebuild)"
+          fi
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4

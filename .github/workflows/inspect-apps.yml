@@ -33,11 +33,6 @@ jobs:
       - name: Install 7zip (for DMG extraction)
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 
-      - name: Download electron-map.json
-        run: |
-          curl -fsSL -o electron-map.json \
-            https://raw.githubusercontent.com/Fz0x00/chromiumHunter/main/electron-map.json
-
       - name: Build hunter
         run: go build -o hunter .
 

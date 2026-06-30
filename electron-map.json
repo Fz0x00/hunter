@@ -1,0 +1,556 @@
+{
+  "generated_at": "2026-06-12T00:00:00.000Z",
+  "electron_versions": [
+    {
+      "electron": "35.0.0",
+      "chromium": "134.0.6998.35",
+      "node": "22.15.2",
+      "release_date": "2025-03-04",
+      "active": true
+    },
+    {
+      "electron": "35.1.0",
+      "chromium": "134.0.6998.177",
+      "node": "22.15.2",
+      "release_date": "2025-04-01",
+      "active": true
+    },
+    {
+      "electron": "35.2.0",
+      "chromium": "134.0.6998.178",
+      "node": "22.15.2",
+      "release_date": "2025-05-06",
+      "active": true
+    },
+    {
+      "electron": "36.0.0",
+      "chromium": "136.0.7103.48",
+      "node": "22.16.0",
+      "release_date": "2025-05-13",
+      "active": true
+    },
+    {
+      "electron": "36.1.0",
+      "chromium": "136.0.7103.92",
+      "node": "22.16.0",
+      "release_date": "2025-06-10",
+      "active": true
+    },
+    {
+      "electron": "36.2.0",
+      "chromium": "136.0.7103.113",
+      "node": "22.16.0",
+      "release_date": "2025-07-08",
+      "active": false
+    },
+    {
+      "electron": "37.0.0",
+      "chromium": "138.0.7204.50",
+      "node": "22.17.0",
+      "release_date": "2025-06-10",
+      "active": true
+    },
+    {
+      "electron": "37.1.0",
+      "chromium": "138.0.7204.100",
+      "node": "22.17.0",
+      "release_date": "2025-07-08",
+      "active": false
+    },
+    {
+      "electron": "38.0.0",
+      "chromium": "140.0.7339.80",
+      "node": "22.18.0",
+      "release_date": "2025-07-15",
+      "active": false
+    },
+    {
+      "electron": "38.1.0",
+      "chromium": "140.0.7339.128",
+      "node": "22.18.0",
+      "release_date": "2025-08-12",
+      "active": false
+    },
+    {
+      "electron": "38.2.0",
+      "chromium": "140.0.7339.185",
+      "node": "22.18.0",
+      "release_date": "2025-09-09",
+      "active": false
+    },
+    {
+      "electron": "39.0.0",
+      "chromium": "142.0.7444.60",
+      "node": "22.19.0",
+      "release_date": "2025-08-12",
+      "active": false
+    },
+    {
+      "electron": "39.1.0",
+      "chromium": "142.0.7444.134",
+      "node": "22.19.0",
+      "release_date": "2025-09-09",
+      "active": false
+    },
+    {
+      "electron": "39.2.0",
+      "chromium": "142.0.7444.203",
+      "node": "22.19.0",
+      "release_date": "2025-10-07",
+      "active": false
+    },
+    {
+      "electron": "40.0.0",
+      "chromium": "144.0.8078.40",
+      "node": "22.20.0",
+      "release_date": "2025-09-09",
+      "active": false
+    },
+    {
+      "electron": "40.1.0",
+      "chromium": "144.0.8078.109",
+      "node": "22.20.0",
+      "release_date": "2025-10-07",
+      "active": false
+    },
+    {
+      "electron": "40.2.0",
+      "chromium": "144.0.8078.174",
+      "node": "22.20.0",
+      "release_date": "2025-11-04",
+      "active": false
+    },
+    {
+      "electron": "41.0.0",
+      "chromium": "146.0.7680.84",
+      "node": "22.21.0",
+      "release_date": "2025-10-07",
+      "active": false
+    },
+    {
+      "electron": "41.1.0",
+      "chromium": "146.0.7680.153",
+      "node": "22.21.0",
+      "release_date": "2025-11-04",
+      "active": false
+    },
+    {
+      "electron": "41.2.0",
+      "chromium": "146.0.7680.203",
+      "node": "22.21.0",
+      "release_date": "2025-12-02",
+      "active": false
+    },
+    {
+      "electron": "42.0.0",
+      "chromium": "148.0.7261.82",
+      "node": "22.22.0",
+      "release_date": "2025-11-04",
+      "active": false
+    },
+    {
+      "electron": "42.1.0",
+      "chromium": "148.0.7261.108",
+      "node": "22.22.0",
+      "release_date": "2025-12-02",
+      "active": false
+    },
+    {
+      "electron": "42.2.0",
+      "chromium": "148.0.7261.138",
+      "node": "22.22.0",
+      "release_date": "2026-01-06",
+      "active": false
+    },
+    {
+      "electron": "43.0.0",
+      "chromium": "150.0.7826.40",
+      "node": "22.23.0",
+      "release_date": "2025-12-02",
+      "active": false
+    },
+    {
+      "electron": "43.1.0",
+      "chromium": "150.0.7826.90",
+      "node": "22.23.0",
+      "release_date": "2026-01-06",
+      "active": false
+    },
+    {
+      "electron": "43.2.0",
+      "chromium": "150.0.7826.144",
+      "node": "22.23.0",
+      "release_date": "2026-02-03",
+      "active": false
+    },
+    {
+      "electron": "44.0.0",
+      "chromium": "152.0.7818.40",
+      "node": "22.24.0",
+      "release_date": "2026-01-06",
+      "active": false
+    },
+    {
+      "electron": "44.1.0",
+      "chromium": "152.0.7818.100",
+      "node": "22.24.0",
+      "release_date": "2026-02-03",
+      "active": false
+    },
+    {
+      "electron": "44.2.0",
+      "chromium": "152.0.7818.138",
+      "node": "22.24.0",
+      "release_date": "2026-03-03",
+      "active": false
+    },
+    {
+      "electron": "45.0.0",
+      "chromium": "154.0.8038.40",
+      "node": "22.25.0",
+      "release_date": "2026-02-03",
+      "active": false
+    },
+    {
+      "electron": "45.1.0",
+      "chromium": "154.0.8038.90",
+      "node": "22.25.0",
+      "release_date": "2026-03-03",
+      "active": false
+    },
+    {
+      "electron": "45.2.0",
+      "chromium": "154.0.8038.128",
+      "node": "22.25.0",
+      "release_date": "2026-04-07",
+      "active": false
+    },
+    {
+      "electron": "46.0.0",
+      "chromium": "156.0.8068.40",
+      "node": "22.26.0",
+      "release_date": "2026-03-03",
+      "active": false
+    },
+    {
+      "electron": "46.1.0",
+      "chromium": "156.0.8068.100",
+      "node": "22.26.0",
+      "release_date": "2026-04-07",
+      "active": false
+    },
+    {
+      "electron": "46.2.0",
+      "chromium": "156.0.8068.138",
+      "node": "22.26.0",
+      "release_date": "2026-05-05",
+      "active": false
+    },
+    {
+      "electron": "47.0.0",
+      "chromium": "158.0.8090.40",
+      "node": "22.27.0",
+      "release_date": "2026-04-07",
+      "active": false
+    },
+    {
+      "electron": "47.1.0",
+      "chromium": "158.0.8090.100",
+      "node": "22.27.0",
+      "release_date": "2026-05-05",
+      "active": false
+    },
+    {
+      "electron": "47.2.0",
+      "chromium": "158.0.8090.153",
+      "node": "22.27.0",
+      "release_date": "2026-06-02",
+      "active": false
+    },
+    {
+      "electron": "48.0.0",
+      "chromium": "160.0.8120.40",
+      "node": "22.28.0",
+      "release_date": "2026-05-05",
+      "active": false
+    },
+    {
+      "electron": "48.1.0",
+      "chromium": "160.0.8120.100",
+      "node": "22.28.0",
+      "release_date": "2026-06-02",
+      "active": false
+    }
+  ],
+  "chromium_versions": {
+    "latest_stable": "149.0.7827.103",
+    "latest_release_date": "2026-06-02",
+    "latest_security_patches": 429,
+    "active_cves": ["CVE-2026-5281", "CVE-2026-3909", "CVE-2026-3910"]
+  },
+  "version_map": {
+    "116.0.5845.179": {
+      "electron": null,
+      "release_date": "2023-08-15",
+      "days_old": 1032,
+      "cve_estimate": 219
+    },
+    "116.0.5845.228": {
+      "electron": null,
+      "release_date": "2023-08-16",
+      "days_old": 1031,
+      "cve_estimate": 218
+    },
+    "118.0.5993.54": {
+      "electron": null,
+      "release_date": "2023-10-10",
+      "days_old": 976,
+      "cve_estimate": 196
+    },
+    "131.0.6778.268": {
+      "electron": null,
+      "release_date": "2024-12-04",
+      "days_old": 556,
+      "cve_estimate": 117
+    },
+    "132.0.6834.210": {
+      "electron": null,
+      "release_date": "2025-01-16",
+      "days_old": 513,
+      "cve_estimate": 94
+    },
+    "138.0.7204.251": {
+      "electron": "37.1.0",
+      "release_date": "2025-07-08",
+      "days_old": 339,
+      "cve_estimate": 57
+    },
+    "142.0.7444.265": {
+      "electron": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "cve_estimate": 32
+    },
+    "142.0.7444.235": {
+      "electron": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "cve_estimate": 32
+    },
+    "146.0.7680.188": {
+      "electron": "41.2.0",
+      "release_date": "2025-12-02",
+      "days_old": 162,
+      "cve_estimate": 11
+    },
+    "146.0.7680.216": {
+      "electron": "41.2.0",
+      "release_date": "2025-12-02",
+      "days_old": 162,
+      "cve_estimate": 11
+    }
+  },
+  "fork_detection": {
+    "standard_electron": {
+      "framework_path": "Electron Framework.framework/Versions/*/Electron Framework",
+      "helper_pattern": "Electron Helper.app/Contents/MacOS/Electron Helper"
+    },
+    "electron_forks": {
+      "Lark": {
+        "framework_name": "Lark Framework.framework",
+        "helper_pattern": "Lark Helper.app/Contents/MacOS/Lark Helper",
+        "chromium_in_path": true
+      }
+    }
+  },
+  "known_apps": [
+    {
+      "name": "百度网盘",
+      "bundle_id": "com.baidu.netdisk",
+      "framework": "Electron",
+      "chromium": "116.0.5845.179",
+      "electron_version": null,
+      "release_date": "2023-08-15",
+      "days_old": 1032,
+      "last_update": "2026-06-09",
+      "supply_chain_gap": "33 版本 / 1032 天"
+    },
+    {
+      "name": "O+Connect",
+      "bundle_id": "com.oneplus.connect",
+      "framework": "Electron",
+      "chromium": "116.0.5845.228",
+      "electron_version": null,
+      "release_date": "2023-08-16",
+      "days_old": 1031,
+      "last_update": "2025-08-12",
+      "supply_chain_gap": "33 版本 / 1031 天"
+    },
+    {
+      "name": "Yakit",
+      "bundle_id": "com.yaklang.yakit",
+      "framework": "Electron",
+      "chromium": "118.0.5993.54",
+      "electron_version": null,
+      "release_date": "2023-10-10",
+      "days_old": 976,
+      "last_update": "2025-07-15",
+      "supply_chain_gap": "31 版本 / 976 天"
+    },
+    {
+      "name": "飞书 Lark",
+      "bundle_id": "com.bytedance.lark.desktop",
+      "framework": "Electron Fork",
+      "fork_name": "Lark Framework",
+      "chromium": "131.0.6778.268",
+      "electron_version": null,
+      "release_date": "2024-12-04",
+      "days_old": 556,
+      "last_update": "2025-12-08",
+      "supply_chain_gap": "18 版本 / 556 天"
+    },
+    {
+      "name": "微信 WeChatAppEx",
+      "bundle_id": "com.tencent.WeChatAppEx",
+      "framework": "CEF",
+      "chromium": "132.0.6834.210",
+      "electron_version": null,
+      "release_date": "2025-01-16",
+      "days_old": 513,
+      "last_update": "2025-10-01",
+      "supply_chain_gap": "17 版本 / 513 天"
+    },
+    {
+      "name": "CodeBuddy",
+      "bundle_id": "com.tencent.codebuddy",
+      "framework": "Electron",
+      "chromium": "132.0.6834.210",
+      "electron_version": null,
+      "release_date": "2025-01-16",
+      "days_old": 513,
+      "last_update": "2025-10-15",
+      "supply_chain_gap": "17 版本 / 513 天"
+    },
+    {
+      "name": "Lingma",
+      "bundle_id": "com.alibaba.Lingma",
+      "framework": "Electron",
+      "chromium": "138.0.7204.251",
+      "electron_version": "37.1.0",
+      "release_date": "2025-07-08",
+      "days_old": 339,
+      "last_update": "2026-03-25",
+      "supply_chain_gap": "11 版本 / 339 天"
+    },
+    {
+      "name": "VS Code",
+      "bundle_id": "com.microsoft.VSCode",
+      "framework": "Electron",
+      "chromium": "142.0.7444.265",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-25",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Cursor",
+      "bundle_id": "com.todesktop.runtime",
+      "framework": "Electron",
+      "chromium": "142.0.7444.265",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-02",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Windsurf",
+      "bundle_id": "com.todesktop.runtime",
+      "framework": "Electron",
+      "chromium": "142.0.7444.265",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-12",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Obsidian",
+      "bundle_id": "md.obsidian",
+      "framework": "Electron",
+      "chromium": "142.0.7444.265",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-02-15",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Trae",
+      "bundle_id": "com.trae.desktop",
+      "framework": "Electron",
+      "chromium": "142.0.7444.235",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-02",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Trae CN",
+      "bundle_id": "com.trae.cn.desktop",
+      "framework": "Electron",
+      "chromium": "142.0.7444.235",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-02",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Kiro",
+      "bundle_id": "kiro.desktop",
+      "framework": "Electron",
+      "chromium": "142.0.7444.265",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-02",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Coze",
+      "bundle_id": "coze.desktop",
+      "framework": "Electron",
+      "chromium": "142.0.7444.235",
+      "electron_version": "39.2.0",
+      "release_date": "2025-10-07",
+      "days_old": 248,
+      "last_update": "2026-03-02",
+      "supply_chain_gap": "7 版本 / 248 天"
+    },
+    {
+      "name": "Notion",
+      "bundle_id": "notion.id",
+      "framework": "Electron",
+      "chromium": "146.0.7680.188",
+      "electron_version": "41.2.0",
+      "release_date": "2025-12-02",
+      "days_old": 162,
+      "last_update": "2026-05-01",
+      "supply_chain_gap": "3 版本 / 162 天"
+    },
+    {
+      "name": "Clash Party",
+      "bundle_id": "clash-party.app",
+      "framework": "Electron",
+      "chromium": "146.0.7680.216",
+      "electron_version": "41.2.0",
+      "release_date": "2025-12-02",
+      "days_old": 162,
+      "last_update": "2026-05-01",
+      "supply_chain_gap": "3 版本 / 162 天"
+    }
+  ]
+}

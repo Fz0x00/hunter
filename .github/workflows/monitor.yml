@@ -125,41 +125,54 @@ jobs:
           fi
           # Clone intel repo, update assets.json, push
           git clone --depth 1 "https://x-access-token:${INTEL_TOKEN}@github.com/Fz0x00/chromium-intel.git" /tmp/intel
-          # Merge local + CI scan results into assets.json
+          # Merge CI results into existing assets.json (preserve apps not found by CI runner)
           python3 - << 'PYEOF'
-          import json
+          import json, datetime
+
           # Load CI results from inspect
           ci_apps = []
           try:
               ci_apps = json.load(open('inspect-results.json')).get('apps', [])
           except: pass
 
-          # Load local scan if available (from artifact or previous)
-          local_apps = []
+          # Load existing assets.json from intel repo
+          existing = {'apps': [], 'scan_time': '', 'source': 'hunter-ci', 'platform': 'mixed'}
           try:
-              local_apps = json.load(open('local-scan.json')).get('apps', [])
+              existing = json.load(open('/tmp/intel/data/assets.json'))
           except: pass
 
-          # Deduplicate by app_name (CI takes priority)
-          seen = set()
-          merged = []
-          for a in ci_apps + local_apps:
+          # Merge: CI results update existing apps, preserve apps not in CI scan
+          ci_map = {}
+          for a in ci_apps:
               name = a.get('app_name', a.get('name', ''))
-              if name in seen:
-                  continue
-              seen.add(name)
-              merged.append(a)
+              if name:
+                  ci_map[name] = a
+
+          merged_map = {}
+          # Start with existing apps
+          for a in existing.get('apps', []):
+              name = a.get('app_name', a.get('name', ''))
+              if name:
+                  merged_map[name] = a
+          # Overlay CI results (updates versions for apps CI found, adds new ones)
+          for name, a in ci_map.items():
+              merged_map[name] = a
+
+          merged = list(merged_map.values())
+          merged.sort(key=lambda a: a.get('app_name', ''))
 
           output = {
-              'scan_time': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+              'scan_time': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
               'source': 'hunter-ci',
-              'platform': 'mixed',
+              'platform': existing.get('platform', 'mixed'),
               'total_apps': len(merged),
               'apps': merged,
           }
           with open('/tmp/intel/data/assets.json', 'w') as f:
               json.dump(output, f, ensure_ascii=False, indent=2)
-          print(f"Wrote {len(merged)} apps to assets.json")
+          print(f"Existing apps: {len(existing.get('apps', []))}")
+          print(f"CI scanned apps: {len(ci_apps)}")
+          print(f"Merged total: {len(merged)} apps")
           PYEOF
 
           cd /tmp/intel

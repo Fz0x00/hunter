@@ -132,14 +132,15 @@ jobs:
           # Load CI results from inspect
           ci_apps = []
           try:
-              ci_apps = json.load(open('inspect-results.json')).get('apps', [])
+              ci_apps = (json.load(open('inspect-results.json')) or {}).get('apps') or []
           except: pass
 
           # Load existing assets.json from intel repo
           existing = {'apps': [], 'scan_time': '', 'source': 'hunter-ci', 'platform': 'mixed'}
           try:
-              existing = json.load(open('/tmp/intel/data/assets.json'))
+              existing = json.load(open('/tmp/intel/data/assets.json')) or existing
           except: pass
+          existing_apps = existing.get('apps') or []
 
           # Merge: CI results update existing apps, preserve apps not in CI scan
           ci_map = {}
@@ -150,7 +151,7 @@ jobs:
 
           merged_map = {}
           # Start with existing apps
-          for a in existing.get('apps', []):
+          for a in existing_apps:
               name = a.get('app_name', a.get('name', ''))
               if name:
                   merged_map[name] = a

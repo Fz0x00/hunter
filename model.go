@@ -72,6 +72,9 @@ type ScanResult struct {
 }
 
 func newScanResult(apps []App, source, scope string) ScanResult {
+	if apps == nil {
+		apps = []App{}
+	}
 	with := 0
 	for _, a := range apps {
 		if a.ChromiumVersion != "" {

@@ -328,6 +328,9 @@ type InspectResult struct {
 }
 
 func newInspectResult(apps []App, entry AppEntry) InspectResult {
+	if apps == nil {
+		apps = []App{}
+	}
 	return InspectResult{
 		Source:   entry.URL,
 		ScanTime: time.Now().UTC().Format(time.RFC3339),

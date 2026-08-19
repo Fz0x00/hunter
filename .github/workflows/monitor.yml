@@ -81,7 +81,7 @@ jobs:
             echo "No tracking file changes"
           else
             git commit -m "chore: update version tracking [skip ci]"
-            git pull --rebase origin main
+            git pull --rebase -X theirs origin main
             git push
           fi
 
@@ -185,7 +185,7 @@ jobs:
             echo "No asset changes"
           else
             git commit -m "chore: update assets from hunter monitor"
-            git pull --rebase origin main
+            git pull --rebase -X theirs origin main
             git push
             echo "Pushed assets to chromium-intel (triggers rebuild)"
           fi

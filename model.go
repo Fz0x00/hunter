@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"runtime"
+	"time"
+)
 
 // Framework 类型枚举（按官方部署规范定义）
 type Framework string
@@ -82,7 +85,7 @@ func newScanResult(apps []App, source, scope string) ScanResult {
 		}
 	}
 	return ScanResult{
-		Platform: "macos",
+		Platform: runtime.GOOS,
 		ScanTime: time.Now().UTC().Format(time.RFC3339),
 		Source:   source,
 		Scope:    scope,

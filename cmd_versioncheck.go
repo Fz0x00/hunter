@@ -83,19 +83,6 @@ func runVersionCheck(args []string) {
 		old.Apps = map[string]versionEntry{}
 	}
 
-	platformOK := func(e AppEntry) bool {
-		if platformFilter == "" {
-			return true
-		}
-		if platformFilter == "macos" {
-			return e.Platform == "macos"
-		}
-		if platformFilter == "linux" {
-			return e.Platform != "macos"
-		}
-		return true
-	}
-
 	// 解析所有 URL，提取版本签名
 	type resolved struct {
 		entry AppEntry
@@ -107,7 +94,7 @@ func runVersionCheck(args []string) {
 
 	var all []resolved
 	for _, entry := range reg.Apps {
-		if !platformOK(entry) {
+		if !platformMatches(entry, platformFilter) {
 			continue
 		}
 		r := resolved{entry: entry}

@@ -12,7 +12,19 @@ var (
 	semverRe      = regexp.MustCompile(`^\d+\.\d+\.\d+`)
 	xmlVersionRe  = regexp.MustCompile(`<key>CFBundleShortVersionString</key>\s*<string>([^<]+)</string>`)
 	xmlBundleIDRe = regexp.MustCompile(`<key>CFBundleIdentifier</key>\s*<string>([^<]+)</string>`)
+	// appVersionRe: 常见 App 版本形态（1.0 / 1.2.3 / 1.2.3-build.5 等）
+	appVersionRe = regexp.MustCompile(`^\d+(\.\d+){1,3}([-+][0-9A-Za-z._-]+)?$`)
 )
+
+// sanitizeAppVersion 过滤二进制 plist 扫描出的垃圾值（如 Kiro 的
+// "_ CFBundleVersionZDTCompiler..."），只保留看起来像版本的字符串。
+func sanitizeAppVersion(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" || !appVersionRe.MatchString(v) {
+		return ""
+	}
+	return v
+}
 
 func readElectronVersionFromApp(appPath, fwDir string) string {
 	for _, p := range []string{

@@ -68,6 +68,21 @@ func loadRegistry(path string) (*AppRegistry, error) {
 	return &reg, nil
 }
 
+// platformMatches 判断 app 是否满足平台过滤（共享给 version-check 与 inspect-list）：
+// 空过滤 = 全部；"macos" = 仅 macOS 专属应用；"linux" = 非 macOS 应用；"any" = 全部
+func platformMatches(e AppEntry, filter string) bool {
+	if filter == "" {
+		return true
+	}
+	if filter == "macos" {
+		return e.Platform == "macos"
+	}
+	if filter == "linux" {
+		return e.Platform != "macos"
+	}
+	return true // "any"
+}
+
 // Squirrel release feed (Electron auto-update format)
 // { "releases": [ {"updateTo": {"url": "...", "version": "..."}}, ... ] }
 type squirrelFeed struct {

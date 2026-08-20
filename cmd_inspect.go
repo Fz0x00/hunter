@@ -108,19 +108,8 @@ func runInspectList(args []string) {
 		}
 	}
 
-	// platformMatch returns true if entry can run on this OS given the filter
-	platformOK := func(e AppEntry) bool {
-		if platformFilter == "" {
-			return true
-		}
-		if platformFilter == "macos" {
-			return e.Platform == "macos"
-		}
-		if platformFilter == "linux" {
-			return e.Platform != "macos"
-		}
-		return true // "any"
-	}
+	// 筛选要检测的应用
+	var toInspect []AppEntry
 
 	if list {
 		fmt.Printf("%-22s %-12s %s\n", "APP", "TYPE", "URL")
@@ -131,7 +120,7 @@ func runInspectList(args []string) {
 				skipped++
 				continue
 			}
-			if !platformOK(entry) {
+			if !platformMatches(entry, platformFilter) {
 				skipped++
 				continue
 			}
@@ -159,12 +148,11 @@ func runInspectList(args []string) {
 	}
 
 	// 筛选要检测的应用
-	var toInspect []AppEntry
 	for _, entry := range reg.Apps {
 		if len(filter) > 0 && !filter[strings.ToLower(entry.Name)] {
 			continue
 		}
-		if !platformOK(entry) {
+		if !platformMatches(entry, platformFilter) {
 			continue
 		}
 		toInspect = append(toInspect, entry)

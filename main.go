@@ -29,6 +29,9 @@ func main() {
 		case "query":
 			runQuery(os.Args[2:])
 			return
+		case "osv-check":
+			runOSVCheck(os.Args[2:])
+			return
 		case "version", "-v", "--version":
 			fmt.Printf("hunter %s\n", version)
 			return
@@ -53,6 +56,7 @@ Commands:
   inspect-list <apps.json>         Batch inspect from a JSON app registry
   version-check <apps.json>        Resolve URLs, compare with versions.json, report changed
   risk                             Match apps against chromium-intel CVE database
+  osv-check                        Query OSV for Electron framework CVEs
   query                            Query scan history from SQLite database
   version                          Show version
 

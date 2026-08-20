@@ -104,6 +104,11 @@ jobs:
         if: steps.vc.outputs.changed != ''
         run: ./hunter query -db hunter.db -old 130 2>&1
 
+      - name: Check Electron CVEs via OSV
+        if: steps.vc.outputs.changed != '' && steps.vc.outputs.changed != 'none'
+        run: |
+          ./hunter osv-check -input inspect-results.json -output osv-electron-cves.json 2>&1 || echo "WARNING: OSV check failed (continuing)"
+
       - name: Download CVE database
         run: |
           curl -sL -o risk-report.json \
@@ -177,10 +182,17 @@ jobs:
           print(f"Merged total: {len(merged)} apps")
           PYEOF
 
+          if [ -f osv-electron-cves.json ]; then
+            cp osv-electron-cves.json /tmp/intel/data/osv-electron-cves.json
+          fi
           cd /tmp/intel
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/assets.json
+          if [ -f data/osv-electron-cves.json ]; then
+            git add data/assets.json data/osv-electron-cves.json
+          else
+            git add data/assets.json
+          fi
           if git diff --cached --quiet; then
             echo "No asset changes"
           else
@@ -201,3 +213,4 @@ jobs:
             versions.json
             dynamic-urls.json
             risk-assessment.json
+            osv-electron-cves.json

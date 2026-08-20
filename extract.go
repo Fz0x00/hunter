@@ -212,10 +212,14 @@ func extractElectronVersion(app *App, em *ElectronMap) {
 	binPath := findFrameworkBinary(fwDir)
 	if binPath != "" {
 		app.BinaryPath = binPath
-		if v, err := extractFromBinary(binPath); err == nil && v != "" {
-			app.ChromiumVersion = v
-			app.ExtractionMethod = ExtractBinaryStrings
-			return
+		data, err := os.ReadFile(binPath)
+		if err == nil {
+			app.ElectronVersion = findElectronVersion(data) // 同文件常含 Electron/x.y.z
+			if v := findChromeVersion(data); v != "" {
+				app.ChromiumVersion = v
+				app.ExtractionMethod = ExtractBinaryStrings
+				return
+			}
 		}
 	}
 
@@ -255,10 +259,14 @@ func extractElectronForkVersion(app *App, em *ElectronMap) {
 	binPath := findFrameworkBinary(fwDir)
 	if binPath != "" {
 		app.BinaryPath = binPath
-		if v, err := extractFromBinary(binPath); err == nil && v != "" {
-			app.ChromiumVersion = v
-			app.ExtractionMethod = ExtractBinaryStrings
-			return
+		data, err := os.ReadFile(binPath)
+		if err == nil {
+			app.ElectronVersion = findElectronVersion(data)
+			if v := findChromeVersion(data); v != "" {
+				app.ChromiumVersion = v
+				app.ExtractionMethod = ExtractBinaryStrings
+				return
+			}
 		}
 	}
 

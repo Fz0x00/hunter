@@ -12,8 +12,9 @@ import (
 // ---------------------------------------------------------------------------
 
 var (
-	chromeVersionRe = regexp.MustCompile(`Chrome/(\d{2,3}\.\d+\.\d+\.\d+)`)
-	cefVersionRe    = regexp.MustCompile(`CEF[:\s]+(\d+\.\d+\.\d+\.\d+)`)
+	chromeVersionRe   = regexp.MustCompile(`Chrome/(\d{2,3}\.\d+\.\d+\.\d+)`)
+	electronVersionRe = regexp.MustCompile(`Electron/(\d+\.\d+\.\d+)`)
+	cefVersionRe      = regexp.MustCompile(`CEF[:\s]+(\d+\.\d+\.\d+\.\d+)`)
 )
 
 func extractFromBinary(binPath string) (string, error) {
@@ -26,6 +27,28 @@ func extractFromBinary(binPath string) (string, error) {
 
 func findChromeVersion(data []byte) string {
 	matches := chromeVersionRe.FindAllSubmatch(data, -1)
+	if len(matches) == 0 {
+		return ""
+	}
+	counts := map[string]int{}
+	for _, m := range matches {
+		counts[string(m[1])]++
+	}
+	var best string
+	var bestCount int
+	for v, c := range counts {
+		if c > bestCount {
+			best = v
+			bestCount = c
+		}
+	}
+	return best
+}
+
+// findElectronVersion 提取二进制 strings 中最常见的 "Electron/x.y.z" 版本
+// 与 findChromeVersion 同理：取出现次数最多的版本（而非首个匹配）
+func findElectronVersion(data []byte) string {
+	matches := electronVersionRe.FindAllSubmatch(data, -1)
 	if len(matches) == 0 {
 		return ""
 	}

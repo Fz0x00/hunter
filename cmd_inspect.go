@@ -237,6 +237,18 @@ func finishInspectList(allApps []App, scope, dbPath, jsonOut string) {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "\n[db] scan #%d saved to %s\n", scanID, dbPath)
+		if scanID > 0 {
+			// 回填统一版本目录（app_catalog）
+			db, err := OpenDB(dbPath)
+			if err == nil {
+				now := time.Now().UTC().Format(time.RFC3339)
+				for _, a := range result.Apps {
+					db.UpdateCatalogVerified(a.Name, a.AppVersion, a.ElectronVersion, a.ChromiumVersion, scanID, now)
+				}
+				db.Close()
+				fmt.Fprintf(os.Stderr, "[catalog] verified %d app(s)\n", len(result.Apps))
+			}
+		}
 	}
 
 	if jsonOut != "" {

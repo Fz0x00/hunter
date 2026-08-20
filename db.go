@@ -64,6 +64,29 @@ JOIN (
     FROM apps
     GROUP BY name
 ) latest ON a.name = latest.name AND a.scan_id = latest.max_scan;
+
+-- 统一版本目录：每 app 一行，合并注册配置 + 解析签名 + 最近实测版本
+CREATE TABLE IF NOT EXISTS app_catalog (
+    app_name           TEXT PRIMARY KEY,
+    publisher          TEXT,
+    url                TEXT,
+    github             TEXT,
+    release_feed       TEXT,
+    version_api        TEXT,
+    asset_pattern      TEXT,
+    platform           TEXT,
+    dynamic            INTEGER NOT NULL DEFAULT 0,
+    download_url       TEXT,
+    resolved_signature TEXT,
+    last_checked       TEXT,
+    last_changed       TEXT,
+    changelog          TEXT DEFAULT '',
+    app_version        TEXT,
+    electron_version   TEXT,
+    chromium_version   TEXT,
+    verified_at        TEXT,
+    verified_scan_id   INTEGER
+);
 `
 
 // DB 封装数据库连接
@@ -348,4 +371,132 @@ func readPlistBundleIDSafe(appPath string) string {
 		return ""
 	}
 	return readPlistBundleID(filepath.Join(appPath, "Contents", "Info.plist"))
+}
+
+// ---------------------------------------------------------------------------
+// app_catalog 统一版本目录
+// ---------------------------------------------------------------------------
+
+// CatalogRow 目录行（查询输出结构）
+type CatalogRow struct {
+	AppName           string `json:"app_name"`
+	Publisher         string `json:"publisher,omitempty"`
+	URL               string `json:"url,omitempty"`
+	GitHub            string `json:"github,omitempty"`
+	ReleaseFeed       string `json:"release_feed,omitempty"`
+	VersionAPI        string `json:"version_api,omitempty"`
+	Platform          string `json:"platform,omitempty"`
+	Dynamic           bool   `json:"dynamic,omitempty"`
+	DownloadURL       string `json:"download_url,omitempty"`
+	ResolvedSignature string `json:"resolved_signature,omitempty"`
+	LastChecked       string `json:"last_checked,omitempty"`
+	LastChanged       string `json:"last_changed,omitempty"`
+	Changelog         string `json:"changelog,omitempty"`
+	AppVersion        string `json:"app_version,omitempty"`
+	ElectronVersion   string `json:"electron_version,omitempty"`
+	ChromiumVersion   string `json:"chromium_version,omitempty"`
+	VerifiedAt        string `json:"verified_at,omitempty"`
+}
+
+// UpsertCatalogConfig 写入/更新 app 注册配置与最近解析签名。
+// 多次 version-check 运行间幂等：配置字段整体覆盖，签名变更时追加 changelog。
+func (d *DB) UpsertCatalogConfig(entries []AppEntry, resolved map[string]resolvedSig, changed map[string]bool, now string) error {
+	tx, err := d.conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`INSERT INTO app_catalog
+		(app_name, publisher, url, github, release_feed, version_api, asset_pattern,
+		 platform, dynamic, download_url, resolved_signature, last_checked, last_changed)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+		ON CONFLICT(app_name) DO UPDATE SET
+		 publisher=excluded.publisher, url=excluded.url, github=excluded.github,
+		 release_feed=excluded.release_feed, version_api=excluded.version_api,
+		 asset_pattern=excluded.asset_pattern, platform=excluded.platform,
+		 dynamic=excluded.dynamic, download_url=excluded.download_url,
+		 resolved_signature=excluded.resolved_signature, last_checked=excluded.last_checked,
+		 last_changed=CASE WHEN excluded.resolved_signature IS NOT excluded.resolved_signature
+		                   AND excluded.resolved_signature != app_catalog.resolved_signature
+		                   THEN excluded.last_checked ELSE app_catalog.last_changed END`)
+	if err != nil {
+		return fmt.Errorf("prepare catalog upsert: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, e := range entries {
+		rs, ok := resolved[e.Name]
+		if !ok {
+			rs = resolvedSig{}
+		}
+		dm := 0
+		if e.Dynamic {
+			dm = 1
+		}
+		if _, err := stmt.Exec(
+			e.Name, e.Publisher, e.URL, e.GitHub, e.ReleaseFeed, e.VersionAPI, e.AssetPattern,
+			e.Platform, dm, rs.url, rs.sig, now, now,
+		); err != nil {
+			return fmt.Errorf("upsert catalog %s: %w", e.Name, err)
+		}
+	}
+	return tx.Commit()
+}
+
+// resolvedSig 记录 version-check 对单个 app 的解析结果（供目录写入）
+type resolvedSig struct {
+	url string
+	tag string
+	sig string
+}
+
+// UpdateCatalogVerified 实测后回填版本列（inspect-list 完成后调用）
+func (d *DB) UpdateCatalogVerified(name, appVer, electron, chrome string, scanID int64, now string) error {
+	_, err := d.conn.Exec(
+		`UPDATE app_catalog SET app_version=?, electron_version=?, chromium_version=?, verified_at=?, verified_scan_id=?
+		 WHERE app_name=?`,
+		appVer, electron, chrome, now, scanID, name,
+	)
+	return err
+}
+
+// QueryCatalog 返回目录全量/按 app 名筛选
+func (d *DB) QueryCatalog(name string) ([]CatalogRow, error) {
+	query := `SELECT app_name, publisher, url, github, release_feed, version_api,
+	                 platform, dynamic, download_url, resolved_signature,
+	                 last_checked, last_changed, changelog,
+	                 app_version, electron_version, chromium_version, verified_at
+	          FROM app_catalog`
+	args := []any{}
+	if name != "" {
+		query += ` WHERE app_name LIKE ?`
+		args = append(args, "%"+name+"%")
+	}
+	query += ` ORDER BY app_name`
+	rows, err := d.conn.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []CatalogRow
+	for rows.Next() {
+		var r CatalogRow
+		var dm int
+		var pub, u, gh, rf, va, plt, du, sig, lc, lch, clog, av, ev, cv, vat sql.NullString
+		if err := rows.Scan(&r.AppName, &pub, &u, &gh, &rf, &va, &plt, &dm, &du, &sig,
+			&lc, &lch, &clog, &av, &ev, &cv, &vat); err != nil {
+			return nil, err
+		}
+		r.Publisher, r.URL, r.GitHub = pub.String, u.String, gh.String
+		r.ReleaseFeed, r.VersionAPI, r.Platform = rf.String, va.String, plt.String
+		r.DownloadURL, r.ResolvedSignature = du.String, sig.String
+		r.LastChecked, r.LastChanged = lc.String, lch.String
+		r.Changelog, r.AppVersion = clog.String, av.String
+		r.ElectronVersion, r.ChromiumVersion, r.VerifiedAt = ev.String, cv.String, vat.String
+		r.Dynamic = dm == 1
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }

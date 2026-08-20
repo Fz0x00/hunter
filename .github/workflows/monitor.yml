@@ -65,7 +65,7 @@ jobs:
             echo "Force mode: inspecting all apps"
             echo "changed=all" >> $GITHUB_OUTPUT
           else
-            OUTPUT=$(./hunter version-check -dynamic-urls dynamic-urls.json -output versions.json -platform linux apps.json 2>&1)
+            OUTPUT=$(./hunter version-check -dynamic-urls dynamic-urls.json -output versions.json -db hunter.db -platform linux apps.json 2>&1)
             echo "$OUTPUT"
             CHANGED=$(echo "$OUTPUT" | grep '^CHANGED=' | cut -d= -f2)
             echo "changed=$CHANGED" >> $GITHUB_OUTPUT
@@ -96,6 +96,19 @@ jobs:
           fi
           ./hunter inspect-list "${ARGS[@]}" apps.json 2>&1
 
+      - name: Commit catalog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add catalog.json
+          if git diff --cached --quiet; then
+            echo "No catalog changes"
+          else
+            git commit -m "chore: update version catalog [skip ci]"
+            git pull --rebase -X theirs origin main
+            git push
+          fi
+
       - name: Show database stats
         if: steps.vc.outputs.changed != ''
         run: ./hunter query -db hunter.db -stats 2>&1
@@ -108,6 +121,12 @@ jobs:
         if: steps.vc.outputs.changed != '' && steps.vc.outputs.changed != 'none'
         run: |
           ./hunter osv-check -input inspect-results.json -output osv-electron-cves.json 2>&1 || echo "WARNING: OSV check failed (continuing)"
+
+      - name: Export unified version catalog
+        run: |
+          ./hunter catalog -db hunter.db -output catalog.json 2>&1 || echo "WARNING: catalog export failed (continuing)"
+          echo "Stale apps (need re-inspect):"
+          ./hunter catalog -db hunter.db -stale 2>&1 | tail -n +3 || true
 
       - name: Download CVE database
         run: |
@@ -214,3 +233,4 @@ jobs:
             dynamic-urls.json
             risk-assessment.json
             osv-electron-cves.json
+            catalog.json

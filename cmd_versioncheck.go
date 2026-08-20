@@ -53,10 +53,12 @@ func runVersionCheck(args []string) {
 		dynamicURLFile string
 		output         string
 		platformFilter string
+		dbPath         string
 	)
 	fs.StringVar(&dynamicURLFile, "dynamic-urls", "", "path to dynamic-urls.json")
 	fs.StringVar(&output, "output", "versions.json", "path to versions.json (read+write)")
 	fs.StringVar(&platformFilter, "platform", "", "filter: macos|linux|any (empty=all)")
+	fs.StringVar(&dbPath, "db", "", "SQLite database to update app_catalog (optional)")
 	fs.Parse(args)
 
 	if fs.NArg() < 1 {
@@ -151,6 +153,31 @@ func runVersionCheck(args []string) {
 	os.WriteFile(output, data, 0644)
 	fmt.Fprintf(os.Stderr, "\n[version-check] %d apps checked, %d changed, %d failed\n",
 		len(all), len(changed), len(failed))
+
+	// 更新 SQLite 统一版本目录（可选 -db）
+	if dbPath != "" {
+		db, err := OpenDB(dbPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[catalog] open db: %v\n", err)
+		} else {
+			resolved := map[string]resolvedSig{}
+			changedSet := map[string]bool{}
+			for _, n := range changed {
+				changedSet[n] = true
+			}
+			for _, r := range all {
+				if r.err != nil {
+					continue
+				}
+				resolved[r.entry.Name] = resolvedSig{url: r.url, tag: r.tag, sig: r.res}
+			}
+			// 把配置文件中的全部条目也纳入（过滤掉的平台项保留配置）
+			if err := db.UpsertCatalogConfig(reg.Apps, resolved, changedSet, now); err != nil {
+				fmt.Fprintf(os.Stderr, "[catalog] upsert: %v\n", err)
+			}
+			db.Close()
+		}
+	}
 
 	// 输出变更的 app 名（逗号分隔，供 workflow 使用）
 	// 格式: CHANGED=App1,App2,App3

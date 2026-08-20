@@ -29,6 +29,24 @@ func (v versionEntry) signature() string {
 	return v.URL
 }
 
+// signature 生成当前解析结果的比较签名：优先 tag；
+// 其次 version_api（GET 返回的版本号）；fixed/latest URL 型
+// 对 URL 做重定向跟踪提取版本 token；失败则退化为原始 URL。
+func signature(urlStr, tag string, apiURL string) string {
+	if tag != "" {
+		return tag
+	}
+	if apiURL != "" {
+		if v := resolveVersionAPI(apiURL); v != "" {
+			return "ver:" + v
+		}
+	}
+	if v := resolveURLVersion(urlStr); v != "" {
+		return "ver:" + v
+	}
+	return urlStr
+}
+
 func runVersionCheck(args []string) {
 	fs := flag.NewFlagSet("version-check", flag.ExitOnError)
 	var (
@@ -83,6 +101,7 @@ func runVersionCheck(args []string) {
 		entry AppEntry
 		url   string
 		tag   string
+		res   string
 		err   error
 	}
 
@@ -93,6 +112,9 @@ func runVersionCheck(args []string) {
 		}
 		r := resolved{entry: entry}
 		r.url, r.tag, r.err = entry.resolveDownloadURL()
+		if r.err == nil {
+			r.res = signature(r.url, r.tag, entry.VersionAPI)
+		}
 		all = append(all, r)
 	}
 
@@ -114,17 +136,24 @@ func runVersionCheck(args []string) {
 		}
 
 		entry := versionEntry{URL: r.url, Tag: r.tag, Checked: now}
+		// fixed/latest URL 型 app：把重定向解析出的版本 token 存为 tag，供下次比较
+		if entry.Tag == "" && r.res != "" && r.res != r.url {
+			entry.Tag = r.res
+		}
 		newApps[r.entry.Name] = entry
 
 		oldEntry, existed := old.Apps[r.entry.Name]
 		if !existed {
 			changed = append(changed, r.entry.Name)
-			fmt.Fprintf(os.Stderr, "[NEW] %s: %s\n", r.entry.Name, r.tag)
-		} else if entry.signature() != oldEntry.signature() {
+			fmt.Fprintf(os.Stderr, "[NEW] %s: %s\n", r.entry.Name, r.res)
+		} else if oldEntry.Tag != "" && r.res != "" && r.res != oldEntry.Tag {
 			changed = append(changed, r.entry.Name)
-			fmt.Fprintf(os.Stderr, "[CHANGED] %s: %s -> %s\n", r.entry.Name, oldEntry.signature(), entry.signature())
+			fmt.Fprintf(os.Stderr, "[CHANGED] %s: %s -> %s\n", r.entry.Name, oldEntry.Tag, r.res)
+		} else if oldEntry.Tag == "" && r.res != "" && r.res != oldEntry.URL {
+			changed = append(changed, r.entry.Name)
+			fmt.Fprintf(os.Stderr, "[CHANGED] %s: %s -> %s\n", r.entry.Name, oldEntry.URL, r.res)
 		} else {
-			fmt.Fprintf(os.Stderr, "[ok] %s: %s\n", r.entry.Name, entry.signature())
+			fmt.Fprintf(os.Stderr, "[ok] %s: %s\n", r.entry.Name, r.res)
 		}
 	}
 

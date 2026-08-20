@@ -6,7 +6,8 @@
       "name": "VS Code",
       "publisher": "Microsoft",
       "url": "https://update.code.visualstudio.com/latest/darwin-universal/stable",
-      "homepage": "https://code.visualstudio.com"
+      "homepage": "https://code.visualstudio.com",
+      "version_api": "https://update.code.visualstudio.com/api/update/darwin-universal/stable/latest"
     },
     {
       "name": "Figma Desktop",

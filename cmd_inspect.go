@@ -46,7 +46,7 @@ func runInspect(args []string) {
 	printTable(apps)
 
 	if jsonOut != "" {
-		result := newInspectResult(apps, entry)
+		result := newScanResult(apps, "inspect", fs.Arg(0))
 		if err := writeJSON(jsonOut, result); err != nil {
 			fmt.Fprintf(os.Stderr, "[error] %v\n", err)
 			os.Exit(1)
@@ -318,23 +318,4 @@ func doInspect(entry AppEntry, emPath string, keep bool, timeout time.Duration) 
 		return nil, fmt.Errorf("no Electron app found")
 	}
 	return apps, nil
-}
-
-type InspectResult struct {
-	Source   string `json:"source"`
-	ScanTime string `json:"scan_time"`
-	Total    int    `json:"total"`
-	Apps     []App  `json:"apps"`
-}
-
-func newInspectResult(apps []App, entry AppEntry) InspectResult {
-	if apps == nil {
-		apps = []App{}
-	}
-	return InspectResult{
-		Source:   entry.URL,
-		ScanTime: time.Now().UTC().Format(time.RFC3339),
-		Total:    len(apps),
-		Apps:     apps,
-	}
 }

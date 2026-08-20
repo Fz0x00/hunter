@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 )
 
 type AppEntry struct {
@@ -17,6 +19,7 @@ type AppEntry struct {
 	GitHub       string `json:"github,omitempty"`
 	AssetPattern string `json:"asset_pattern,omitempty"`
 	ReleaseFeed  string `json:"release_feed,omitempty"`
+	VersionAPI   string `json:"version_api,omitempty"` // GET 返回 JSON/文本中含版本
 	Homepage     string `json:"homepage,omitempty"`
 	Platform     string `json:"platform,omitempty"` // "macos" = needs hdiutil; empty/"any" = any OS
 	Dynamic      bool   `json:"dynamic,omitempty"`  // true = URL from dynamic-urls.json
@@ -139,3 +142,115 @@ func (e *AppEntry) resolveDownloadURL() (string, string, error) {
 	}
 	return "", "", fmt.Errorf("no url or github for %s", e.Name)
 }
+
+// resolveVersionAPI GET 一个 JSON/文本版本 API，提取版本字符串。
+// 支持格式：{"version":"1.2.3"}、{"productVersion":"1.2.3"}、裸 semver 文本。
+func resolveVersionAPI(apiURL string) string {
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("User-Agent", "hunter/"+version)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return ""
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return ""
+	}
+	// 提取 JSON 字段：优先 productVersion / tag_name，其次 version；
+	// 且优先语义版本（避免 VS Code 的 version 是 commit hash 等）
+	best := ""
+	for _, m := range jsonVersionRe.FindAllSubmatch(body, -1) {
+		if len(m) < 2 {
+			continue
+		}
+		key, val := string(m[1]), string(m[2])
+		if val == "" {
+			continue
+		}
+		isSemver := semverAnywhereRe.MatchString(val)
+		if isSemver {
+			if key == "productVersion" || key == "tag_name" || best == "" {
+				return val
+			}
+			if best == "" {
+				best = val
+			}
+		} else if best == "" && (key == "productVersion" || key == "tag_name") {
+			best = val
+		}
+	}
+	if best != "" {
+		return best
+	}
+	// 兜底：文本中的第一个 semver
+	if m := semverAnywhereRe.FindSubmatch(body); len(m) >= 2 {
+		return string(m[1])
+	}
+	return ""
+}
+
+var (
+	jsonVersionRe    = regexp.MustCompile(`"(productVersion|version|tag_name)"\s*:\s*"([^"]+)"`)
+	semverAnywhereRe = regexp.MustCompile(`\b(v?)(\d+\.\d+(?:\.\d+){0,2})\b`)
+)
+
+// resolveURLVersion 跟踪重定向并从最终 URL 提取版本。用于 fixed/latest URL 型 app
+// （如 discord.com/api/download、updates.signal.org/desktop/latest）：
+// 这些端点 3xx 到带版本的 CDN URL，HEAD 成本远低于下载安装包。
+// 提取失败返回 ""（调用方 fallback 到原始 URL 签名）。
+func resolveURLVersion(rawURL string) string {
+	req, err := http.NewRequest(http.MethodHead, rawURL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("User-Agent", "hunter/"+version)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	finalURL := rawURL
+	if resp != nil {
+		resp.Body.Close()
+		if resp.Request != nil && resp.Request.URL != nil {
+			finalURL = resp.Request.URL.String()
+		}
+	}
+	return extractVersionToken(finalURL)
+}
+
+// versionTokenRe 提取 URL 中的语义版本或纯数字 build 号。
+var (
+	versionTokenRe  = regexp.MustCompile(`(?i)(?:^|/)(?:v|version[_-]?)?(\d+\.\d+(?:\.\d+){0,2})(?:[^0-9.]|$)`)
+	buildTokenRe    = regexp.MustCompile(`(?i)(?:^|/)(\d{5,})(?:/|\.|$)`)
+	metaPathSegment = regexp.MustCompile(`(?i)latest|stable|beta|canary|dev|downloads?|releases|versions|update|arch|arm|x64|x86|darwin|mac|macos|osx|universal|win|windows|linux`)
+)
+
+func extractVersionToken(u string) string {
+	// 1) 语义版本：取最后一个出现（重定向终点的 URL 通常带版本）
+	all := versionTokenRe.FindAllStringSubmatch(u, -1)
+	for i := len(all) - 1; i >= 0; i-- {
+		if tok := all[i][1]; tok != "" && !metaPathSegment.MatchString(tok) {
+			return tok
+		}
+	}
+	// 2) 兜底：≥5 位纯数字 build 号（如 Discord CDN 的 build id）；
+	//    排除 20YYMMDD 日期形态
+	all = buildTokenRe.FindAllStringSubmatch(u, -1)
+	for i := len(all) - 1; i >= 0; i-- {
+		if tok := all[i][1]; tok != "" && !dateLikeRe.MatchString(tok) {
+			return tok
+		}
+	}
+	return ""
+}
+
+var dateLikeRe = regexp.MustCompile(`^20\d{6}$`)

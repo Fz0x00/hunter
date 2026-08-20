@@ -87,6 +87,22 @@ CREATE TABLE IF NOT EXISTS app_catalog (
     verified_at        TEXT,
     verified_scan_id   INTEGER
 );
+
+-- 版本历史：每次扫描追加观察记录，不覆盖（per-app 版本历史持久化）
+CREATE TABLE IF NOT EXISTS version_history (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    app_name         TEXT    NOT NULL,
+    app_version      TEXT    NOT NULL DEFAULT '',
+    electron_version TEXT    NOT NULL DEFAULT '',
+    chromium_version TEXT    NOT NULL DEFAULT '',
+    platform         TEXT    NOT NULL DEFAULT '',
+    source           TEXT    NOT NULL DEFAULT 'scan',
+    first_seen       TEXT,
+    last_seen        TEXT,
+    UNIQUE(app_name, app_version, chromium_version)
+);
+
+CREATE INDEX IF NOT EXISTS idx_verhist_name ON version_history(app_name);
 `
 
 // DB 封装数据库连接
@@ -201,6 +217,40 @@ func (d *DB) InsertScan(result ScanResult) (int64, error) {
 			string(app.ExtractionMethod), app.BinaryPath, now,
 		); err != nil {
 			return 0, fmt.Errorf("insert app %s: %w", app.Name, err)
+		}
+	}
+
+	// 3. 追加版本历史（INSERT OR IGNORE 保留 first_seen，再更新 last_seen）
+	vhStmt, err := tx.Prepare(
+		`INSERT OR IGNORE INTO version_history
+		   (app_name, app_version, electron_version, chromium_version, platform, source, first_seen, last_seen)
+		 VALUES (?,?,?,?,?,?,?,?)`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("prepare version_history insert: %w", err)
+	}
+	defer vhStmt.Close()
+
+	vhUpdate, err := tx.Prepare(
+		`UPDATE version_history SET last_seen = ?
+		 WHERE app_name = ? AND app_version = ? AND chromium_version = ? AND (last_seen IS NULL OR last_seen < ?)`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("prepare version_history update: %w", err)
+	}
+	defer vhUpdate.Close()
+
+	for _, app := range result.Apps {
+		if _, err := vhStmt.Exec(
+			app.Name, app.AppVersion, app.ElectronVersion, app.ChromiumVersion,
+			result.Platform, result.Source, now, now,
+		); err != nil {
+			return 0, fmt.Errorf("record history %s: %w", app.Name, err)
+		}
+		if _, err := vhUpdate.Exec(
+			now, app.Name, app.AppVersion, app.ChromiumVersion, now,
+		); err != nil {
+			return 0, fmt.Errorf("update history %s: %w", app.Name, err)
 		}
 	}
 
@@ -499,4 +549,84 @@ func (d *DB) QueryCatalog(name string) ([]CatalogRow, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// HistoryRecord 版本历史观察记录（version_history 表）
+type HistoryRecord struct {
+	AppName         string `json:"app_name"`
+	AppVersion      string `json:"app_version"`
+	ElectronVersion string `json:"electron_version,omitempty"`
+	ChromiumVersion string `json:"chromium_version,omitempty"`
+	Platform        string `json:"platform,omitempty"`
+	Source          string `json:"source,omitempty"`
+	FirstSeen       string `json:"first_seen"`
+	LastSeen        string `json:"last_seen"`
+}
+
+// ExportHistory 导出全量版本历史
+func (d *DB) ExportHistory() ([]HistoryRecord, error) {
+	rows, err := d.conn.Query(
+		`SELECT app_name, app_version, electron_version, chromium_version, platform, source,
+		        COALESCE(first_seen,''), COALESCE(last_seen,'')
+		 FROM version_history ORDER BY app_name, app_version`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []HistoryRecord
+	for rows.Next() {
+		var r HistoryRecord
+		if err := rows.Scan(&r.AppName, &r.AppVersion, &r.ElectronVersion, &r.ChromiumVersion,
+			&r.Platform, &r.Source, &r.FirstSeen, &r.LastSeen); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// ImportHistory 合并导入版本历史：INSERT OR IGNORE 保留 first_seen，last_seen 取更晚者
+func (d *DB) ImportHistory(recs []HistoryRecord) (int, error) {
+	tx, err := d.conn.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	ins, err := tx.Prepare(
+		`INSERT OR IGNORE INTO version_history
+		   (app_name, app_version, electron_version, chromium_version, platform, source, first_seen, last_seen)
+		 VALUES (?,?,?,?,?,?,?,?)`)
+	if err != nil {
+		return 0, err
+	}
+	defer ins.Close()
+
+	upd, err := tx.Prepare(
+		`UPDATE version_history SET last_seen = ?
+		 WHERE app_name = ? AND app_version = ? AND chromium_version = ? AND (last_seen IS NULL OR last_seen < ?)`)
+	if err != nil {
+		return 0, err
+	}
+	defer upd.Close()
+
+	n := 0
+	for _, r := range recs {
+		if r.AppName == "" {
+			continue
+		}
+		if _, err := ins.Exec(r.AppName, r.AppVersion, r.ElectronVersion, r.ChromiumVersion,
+			r.Platform, r.Source, r.FirstSeen, r.LastSeen); err != nil {
+			return 0, err
+		}
+		if _, err := upd.Exec(r.LastSeen, r.AppName, r.AppVersion, r.ChromiumVersion, r.LastSeen); err != nil {
+			return 0, err
+		}
+		n++
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return n, nil
 }

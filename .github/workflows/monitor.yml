@@ -52,6 +52,16 @@ jobs:
       - name: Build hunter
         run: go build -o hunter .
 
+      - name: Seed version history from chromium-intel
+        run: |
+          curl -sL -o app-history-scan.json \
+            "https://raw.githubusercontent.com/Fz0x00/chromium-intel/main/data/app-history-scan.json" || true
+          if [ -s app-history-scan.json ]; then
+            ./hunter history -db hunter.db -import app-history-scan.json 2>&1 || echo "WARNING: history import failed (starting fresh)"
+          else
+            echo "No remote history found, starting fresh"
+          fi
+
       - name: Collect dynamic download URLs
         run: python scripts/collect_urls.py
         continue-on-error: true
@@ -204,6 +214,10 @@ jobs:
           if [ -f osv-electron-cves.json ]; then
             cp osv-electron-cves.json /tmp/intel/data/osv-electron-cves.json
           fi
+          ./hunter history -db hunter.db -export app-history-scan.json 2>&1 || echo "WARNING: history export failed"
+          if [ -s app-history-scan.json ]; then
+            cp app-history-scan.json /tmp/intel/data/app-history-scan.json
+          fi
           cd /tmp/intel
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -211,6 +225,9 @@ jobs:
             git add data/assets.json data/osv-electron-cves.json
           else
             git add data/assets.json
+          fi
+          if [ -f data/app-history-scan.json ]; then
+            git add data/app-history-scan.json
           fi
           if git diff --cached --quiet; then
             echo "No asset changes"

@@ -35,6 +35,9 @@ func main() {
 		case "catalog":
 			runCatalog(os.Args[2:])
 			return
+		case "history":
+			runHistory(os.Args[2:])
+			return
 		case "version", "-v", "--version":
 			fmt.Printf("hunter %s\n", version)
 			return
@@ -61,6 +64,7 @@ Commands:
   risk                             Match apps against chromium-intel CVE database
   osv-check                        Query OSV for Electron framework CVEs
   catalog                          Unified version catalog (config + signature + verified)
+  history                          Export/import per-app version history
   query                            Query scan history from SQLite database
   version                          Show version
 

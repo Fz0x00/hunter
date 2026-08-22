@@ -106,19 +106,6 @@ jobs:
           fi
           ./hunter inspect-list "${ARGS[@]}" apps.json 2>&1
 
-      - name: Commit catalog
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add catalog.json
-          if git diff --cached --quiet; then
-            echo "No catalog changes"
-          else
-            git commit -m "chore: update version catalog [skip ci]"
-            git pull --rebase -X theirs origin main
-            git push
-          fi
-
       - name: Show database stats
         if: steps.vc.outputs.changed != ''
         run: ./hunter query -db hunter.db -stats 2>&1
@@ -137,6 +124,20 @@ jobs:
           ./hunter catalog -db hunter.db -output catalog.json 2>&1 || echo "WARNING: catalog export failed (continuing)"
           echo "Stale apps (need re-inspect):"
           ./hunter catalog -db hunter.db -stale 2>&1 | tail -n +3 || true
+
+      - name: Commit catalog
+        if: hashFiles('catalog.json') != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add catalog.json
+          if git diff --cached --quiet; then
+            echo "No catalog changes"
+          else
+            git commit -m "chore: update version catalog [skip ci]"
+            git pull --rebase -X theirs origin main
+            git push
+          fi
 
       - name: Download CVE database
         run: |

@@ -253,10 +253,44 @@
       "dynamic": true
     },
     {
-      "name": "BlueStacks",
-      "publisher": "BlueStacks",
-      "homepage": "https://www.bluestacks.com/download.html",
+      "name": "Feishu",
+      "publisher": "ByteDance",
+      "homepage": "https://www.feishu.cn/",
       "dynamic": true
+    },
+    {
+      "name": "Baidu Netdisk",
+      "publisher": "Baidu",
+      "homepage": "https://pan.baidu.com/download",
+      "dynamic": true
+    },
+    {
+      "name": "Yakit",
+      "publisher": "Yaklang",
+      "github": "yaklang/yakit",
+      "asset_pattern": "^Yakit-[\\d.]+-\\d+-darwin-arm64\\.dmg$",
+      "homepage": "https://yaklang.io"
+    },
+    {
+      "name": "Session",
+      "publisher": "Oxen",
+      "github": "oxen-io/session-desktop",
+      "asset_pattern": "^session-desktop-mac-x64-[\\d.]+\\.dmg$",
+      "homepage": "https://getsession.org"
+    },
+    {
+      "name": "Rancher Desktop",
+      "publisher": "SUSE",
+      "github": "rancher-sandbox/rancher-desktop",
+      "asset_pattern": "^Rancher\\.Desktop-[\\d.]+\\.aarch64\\.dmg$",
+      "homepage": "https://rancherdesktop.io"
+    },
+    {
+      "name": "Tabby",
+      "publisher": "Eugeny",
+      "github": "Eugeny/tabby",
+      "asset_pattern": "^tabby-[\\d.]+-macos-arm64\\.dmg$",
+      "homepage": "https://tabby.sh"
     }
   ]
 }

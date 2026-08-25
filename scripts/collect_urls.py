@@ -6,9 +6,8 @@ URL 收集器：用 Playwright 无头浏览器定期获取 JS 渲染下载页面
 {
   "updated": "2026-06-30T18:00:00Z",
   "urls": {
-    "BlueStacks": "https://ak-build.bluestacks.com/...",
-    "Doubao": "https://lf9-apk.ugapk.cn/...",
-    "QQ": "https://qqdl.gtimg.cn/..."
+    "QQ": "https://qqdl.gtimg.cn/...",
+    "Doubao": "https://lf9-apk.ugapk.cn/..."
   }
 }
 
@@ -111,9 +110,9 @@ def collect_doubao(page):
     return None
 
 
-def collect_bluestacks(page):
-    """BlueStacks: bluestacks.com/download.html 点击 Download 后网络请求中出现 PKG 链接"""
-    print("[BlueStacks] collecting...", flush=True)
+def collect_baidu(page):
+    """百度网盘: pan.baidu.com/download JS 渲染，切换到 Mac 标签后网络请求中出现 DMG 链接"""
+    print("[Baidu Netdisk] collecting...", flush=True)
     captured = []
 
     def on_resp(resp):
@@ -122,13 +121,13 @@ def collect_bluestacks(page):
 
     page.on("response", on_resp)
     try:
-        page.goto("https://www.bluestacks.com/download.html", wait_until="domcontentloaded", timeout=25000)
+        page.goto("https://pan.baidu.com/download", wait_until="domcontentloaded", timeout=25000)
     except Exception as e:
-        print(f"  [BlueStacks] goto error: {e}")
+        print(f"  [Baidu Netdisk] goto error: {e}")
     page.wait_for_timeout(3000)
 
-    # 点击 Download 按钮（可能需要先选 Mac）
-    for sel in ["text=Mac", "text=Download", "text=下载"]:
+    # 点击 Mac 标签
+    for sel in ["text=Mac", "text=macOS", "text=苹果"]:
         try:
             loc = page.locator(sel).first
             if loc.count() > 0 and loc.is_visible():
@@ -138,12 +137,45 @@ def collect_bluestacks(page):
         except Exception:
             pass
 
-    if captured:
-        u = sorted(set(captured))[0]
-        print(f"  [BlueStacks] -> {u}")
+    # 优先含 mac 的 dmg，其次任意 dmg（排除 windows zip/exe）
+    mac = [u for u in captured if ".dmg" in u.lower() and "mac" in u.lower()]
+    if mac:
+        u = sorted(set(mac))[0]
+        print(f"  [Baidu Netdisk] -> {u}")
+        return u
+    dmg = [u for u in captured if u.lower().endswith(".dmg") or ".dmg?" in u.lower()]
+    if dmg:
+        u = sorted(set(dmg))[0]
+        print(f"  [Baidu Netdisk] -> {u}")
         return u
 
-    print("  [BlueStacks] FAILED")
+    print("  [Baidu Netdisk] FAILED")
+    return None
+
+
+def collect_feishu():
+    """飞书: 公开下载 API 直接返回带版本的 DMG 链接（无需浏览器）"""
+    import json as _json
+    import urllib.request
+
+    print("[Feishu] collecting...", flush=True)
+    try:
+        req = urllib.request.Request(
+            "https://www.feishu.cn/api/downloads",
+            headers={"User-Agent": UA_MAC},
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = _json.load(r)
+        versions = data.get("versions", {})
+        # 优先 Apple Silicon，回退 Intel
+        entry = versions.get("MacOS_m1") or versions.get("MacOS")
+        url = entry.get("download_link") if entry else None
+        if url:
+            print(f"  [Feishu] -> {url}")
+            return url
+    except Exception as e:
+        print(f"  [Feishu] error: {e}")
+    print("  [Feishu] FAILED")
     return None
 
 
@@ -155,9 +187,11 @@ def main():
 
         results["QQ"] = collect_qq(context.new_page())
         results["Doubao"] = collect_doubao(context.new_page())
-        results["BlueStacks"] = collect_bluestacks(context.new_page())
+        results["Baidu Netdisk"] = collect_baidu(context.new_page())
 
         browser.close()
+
+    results["Feishu"] = collect_feishu()
 
     # 合并旧数据（如果新获取失败，保留旧 URL）
     old = {}

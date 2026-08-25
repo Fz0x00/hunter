@@ -111,46 +111,43 @@ def collect_doubao(page):
 
 
 def collect_baidu(page):
-    """百度网盘: pan.baidu.com/download JS 渲染，切换到 Mac 标签后网络请求中出现 DMG 链接"""
+    """百度网盘: 下载页 JS bundle 内嵌版本化 DMG 链接（无点击交互）。
+    抓取所有 JS 响应体，提取 BaiduNetdisk_mac_*.dmg，按版本取最新。"""
     print("[Baidu Netdisk] collecting...", flush=True)
-    captured = []
+    import re
+
+    bodies = []
 
     def on_resp(resp):
-        if DL_RE.search(resp.url):
-            captured.append(resp.url)
+        try:
+            if "javascript" in resp.headers.get("content-type", ""):
+                bodies.append(resp.text())
+        except Exception:
+            pass
 
     page.on("response", on_resp)
     try:
-        page.goto("https://pan.baidu.com/download", wait_until="domcontentloaded", timeout=25000)
+        page.goto("https://pan.baidu.com/download", wait_until="networkidle", timeout=30000)
     except Exception as e:
         print(f"  [Baidu Netdisk] goto error: {e}")
     page.wait_for_timeout(3000)
 
-    # 点击 Mac 标签
-    for sel in ["text=Mac", "text=macOS", "text=苹果"]:
-        try:
-            loc = page.locator(sel).first
-            if loc.count() > 0 and loc.is_visible():
-                loc.click(timeout=3000)
-                page.wait_for_timeout(3000)
-                break
-        except Exception:
-            pass
+    urls = set()
+    for body in bodies:
+        urls.update(re.findall(r'https?://[^"\'\\ )]+BaiduNetdisk_mac_[^"\'\\ )]+\.dmg', body))
 
-    # 优先含 mac 的 dmg，其次任意 dmg（排除 windows zip/exe）
-    mac = [u for u in captured if ".dmg" in u.lower() and "mac" in u.lower()]
-    if mac:
-        u = sorted(set(mac))[0]
-        print(f"  [Baidu Netdisk] -> {u}")
-        return u
-    dmg = [u for u in captured if u.lower().endswith(".dmg") or ".dmg?" in u.lower()]
-    if dmg:
-        u = sorted(set(dmg))[0]
-        print(f"  [Baidu Netdisk] -> {u}")
-        return u
+    def ver(u):
+        m = re.findall(r'(\d+)\.(\d+)\.(\d+)', u)
+        return tuple(map(int, m[0])) if m else (0, 0, 0)
 
-    print("  [Baidu Netdisk] FAILED")
-    return None
+    if not urls:
+        print("  [Baidu Netdisk] FAILED (no dmg urls in js)")
+        return None
+
+    # 同版本下：优先 arm64，其次官方渠道 bdfc
+    best = sorted(urls, key=lambda u: (ver(u), "arm64" in u, "bdfc" in u), reverse=True)[0]
+    print(f"  [Baidu Netdisk] -> {best}")
+    return best
 
 
 def collect_feishu():

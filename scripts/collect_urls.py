@@ -127,10 +127,11 @@ def collect_baidu(page):
 
     page.on("response", on_resp)
     try:
-        page.goto("https://pan.baidu.com/download", wait_until="networkidle", timeout=30000)
+        # 广告请求多，networkidle 永远等不到；domcontentloaded + 固定等待即可
+        page.goto("https://pan.baidu.com/download", wait_until="domcontentloaded", timeout=30000)
     except Exception as e:
         print(f"  [Baidu Netdisk] goto error: {e}")
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(5000)
 
     urls = set()
     for body in bodies:

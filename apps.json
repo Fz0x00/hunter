@@ -291,6 +291,30 @@
       "github": "Eugeny/tabby",
       "asset_pattern": "^tabby-[\\d.]+-macos-arm64\\.dmg$",
       "homepage": "https://tabby.sh"
+    },
+    {
+      "name": "DingTalk",
+      "publisher": "Alibaba",
+      "cask": "dingtalk",
+      "homepage": "https://www.dingtalk.com"
+    },
+    {
+      "name": "WhatsApp",
+      "publisher": "Meta",
+      "cask": "whatsapp",
+      "homepage": "https://www.whatsapp.com"
+    },
+    {
+      "name": "Steam",
+      "publisher": "Valve",
+      "cask": "steam",
+      "homepage": "https://store.steampowered.com"
+    },
+    {
+      "name": "Spotify",
+      "publisher": "Spotify",
+      "cask": "spotify",
+      "homepage": "https://spotify.com"
     }
   ]
 }

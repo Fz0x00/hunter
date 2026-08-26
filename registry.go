@@ -20,6 +20,7 @@ type AppEntry struct {
 	AssetPattern string `json:"asset_pattern,omitempty"`
 	ReleaseFeed  string `json:"release_feed,omitempty"`
 	VersionAPI   string `json:"version_api,omitempty"` // GET 返回 JSON/文本中含版本
+	Cask         string `json:"cask,omitempty"`        // Homebrew cask token（formulae.brew.sh 元数据）
 	Homepage     string `json:"homepage,omitempty"`
 	Platform     string `json:"platform,omitempty"` // "macos" = needs hdiutil; empty/"any" = any OS
 	Dynamic      bool   `json:"dynamic,omitempty"`  // true = URL from dynamic-urls.json
@@ -135,6 +136,46 @@ func resolveReleaseFeed(feedURL string) (string, string, error) {
 	return urlStr, rel.Version, nil
 }
 
+// Homebrew cask 元数据（https://formulae.brew.sh/api/cask/{token}.json）
+// version 可能是复合值（如 "8.5.0,57546446"）——原样返回，保证签名稳定性
+type caskMeta struct {
+	Token   string `json:"token"`
+	Version string `json:"version"`
+	URL     string `json:"url"`
+}
+
+// resolveCask 查询 Homebrew cask API，返回官方下载 URL + 当前版本。
+// 版本和地址由 Homebrew 社区维护，一次配置即可持续跟踪版本变更。
+func resolveCask(token string) (string, string, error) {
+	apiURL := "https://formulae.brew.sh/api/cask/" + url.PathEscape(token) + ".json"
+	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("User-Agent", "hunter/"+version)
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return "", "", fmt.Errorf("cask HTTP %d for %s", resp.StatusCode, token)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", "", err
+	}
+	var meta caskMeta
+	if err := json.Unmarshal(body, &meta); err != nil {
+		return "", "", fmt.Errorf("parse cask %s: %w", token, err)
+	}
+	if meta.URL == "" || meta.Version == "" {
+		return "", "", fmt.Errorf("cask %s: empty url/version", token)
+	}
+	return meta.URL, meta.Version, nil
+}
+
 func (e *AppEntry) resolveDownloadURL() (string, string, error) {
 	// Dynamic apps: URL from playwright collector (dynamic-urls.json)
 	if e.Dynamic && dynamicURLs != nil {
@@ -147,6 +188,9 @@ func (e *AppEntry) resolveDownloadURL() (string, string, error) {
 	}
 	if e.ReleaseFeed != "" {
 		return resolveReleaseFeed(e.ReleaseFeed)
+	}
+	if e.Cask != "" {
+		return resolveCask(e.Cask)
 	}
 	if e.GitHub != "" {
 		pattern := e.AssetPattern

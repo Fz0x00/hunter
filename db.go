@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS app_catalog (
     github             TEXT,
     release_feed       TEXT,
     version_api        TEXT,
+    cask               TEXT,
     asset_pattern      TEXT,
     platform           TEXT,
     dynamic            INTEGER NOT NULL DEFAULT 0,
@@ -134,6 +135,11 @@ func OpenDB(path string) (*DB, error) {
 		conn.Close()
 		return nil, fmt.Errorf("migrate app_version: %w", err)
 	}
+	// Migration: 为旧数据库的 app_catalog 添加 cask 列
+	if err := migrateCatalogCask(conn); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("migrate catalog cask: %w", err)
+	}
 	return &DB{conn: conn}, nil
 }
 
@@ -164,6 +170,34 @@ func migrateAppVersion(conn *sql.DB) error {
 	rows.Close()
 	if !hasCol {
 		_, err := conn.Exec("ALTER TABLE apps ADD COLUMN app_version TEXT")
+		return err
+	}
+	return nil
+}
+
+// migrateCatalogCask 检查 app_catalog 表是否有 cask 列，没有则添加（兼容旧 DB）
+func migrateCatalogCask(conn *sql.DB) error {
+	rows, err := conn.Query("PRAGMA table_info(app_catalog)")
+	if err != nil {
+		return err
+	}
+	hasCol := false
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &typ, &notnull, &dflt, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		if name == "cask" {
+			hasCol = true
+		}
+	}
+	rows.Close()
+	if !hasCol {
+		_, err := conn.Exec("ALTER TABLE app_catalog ADD COLUMN cask TEXT")
 		return err
 	}
 	return nil
@@ -435,6 +469,7 @@ type CatalogRow struct {
 	GitHub            string `json:"github,omitempty"`
 	ReleaseFeed       string `json:"release_feed,omitempty"`
 	VersionAPI        string `json:"version_api,omitempty"`
+	Cask              string `json:"cask,omitempty"`
 	Platform          string `json:"platform,omitempty"`
 	Dynamic           bool   `json:"dynamic,omitempty"`
 	DownloadURL       string `json:"download_url,omitempty"`
@@ -458,13 +493,13 @@ func (d *DB) UpsertCatalogConfig(entries []AppEntry, resolved map[string]resolve
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(`INSERT INTO app_catalog
-		(app_name, publisher, url, github, release_feed, version_api, asset_pattern,
+		(app_name, publisher, url, github, release_feed, version_api, cask, asset_pattern,
 		 platform, dynamic, download_url, resolved_signature, last_checked, last_changed)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(app_name) DO UPDATE SET
 		 publisher=excluded.publisher, url=excluded.url, github=excluded.github,
 		 release_feed=excluded.release_feed, version_api=excluded.version_api,
-		 asset_pattern=excluded.asset_pattern, platform=excluded.platform,
+		 cask=excluded.cask, asset_pattern=excluded.asset_pattern, platform=excluded.platform,
 		 dynamic=excluded.dynamic, download_url=excluded.download_url,
 		 resolved_signature=excluded.resolved_signature, last_checked=excluded.last_checked,
 		 last_changed=CASE WHEN excluded.resolved_signature IS NOT excluded.resolved_signature
@@ -485,7 +520,7 @@ func (d *DB) UpsertCatalogConfig(entries []AppEntry, resolved map[string]resolve
 			dm = 1
 		}
 		if _, err := stmt.Exec(
-			e.Name, e.Publisher, e.URL, e.GitHub, e.ReleaseFeed, e.VersionAPI, e.AssetPattern,
+			e.Name, e.Publisher, e.URL, e.GitHub, e.ReleaseFeed, e.VersionAPI, e.Cask, e.AssetPattern,
 			e.Platform, dm, rs.url, rs.sig, now, now,
 		); err != nil {
 			return fmt.Errorf("upsert catalog %s: %w", e.Name, err)
@@ -513,7 +548,7 @@ func (d *DB) UpdateCatalogVerified(name, appVer, electron, chrome string, scanID
 
 // QueryCatalog 返回目录全量/按 app 名筛选
 func (d *DB) QueryCatalog(name string) ([]CatalogRow, error) {
-	query := `SELECT app_name, publisher, url, github, release_feed, version_api,
+	query := `SELECT app_name, publisher, url, github, release_feed, version_api, cask,
 	                 platform, dynamic, download_url, resolved_signature,
 	                 last_checked, last_changed, changelog,
 	                 app_version, electron_version, chromium_version, verified_at
@@ -534,13 +569,13 @@ func (d *DB) QueryCatalog(name string) ([]CatalogRow, error) {
 	for rows.Next() {
 		var r CatalogRow
 		var dm int
-		var pub, u, gh, rf, va, plt, du, sig, lc, lch, clog, av, ev, cv, vat sql.NullString
-		if err := rows.Scan(&r.AppName, &pub, &u, &gh, &rf, &va, &plt, &dm, &du, &sig,
+		var pub, u, gh, rf, va, ck, plt, du, sig, lc, lch, clog, av, ev, cv, vat sql.NullString
+		if err := rows.Scan(&r.AppName, &pub, &u, &gh, &rf, &va, &ck, &plt, &dm, &du, &sig,
 			&lc, &lch, &clog, &av, &ev, &cv, &vat); err != nil {
 			return nil, err
 		}
 		r.Publisher, r.URL, r.GitHub = pub.String, u.String, gh.String
-		r.ReleaseFeed, r.VersionAPI, r.Platform = rf.String, va.String, plt.String
+		r.ReleaseFeed, r.VersionAPI, r.Cask, r.Platform = rf.String, va.String, ck.String, plt.String
 		r.DownloadURL, r.ResolvedSignature = du.String, sig.String
 		r.LastChecked, r.LastChanged = lc.String, lch.String
 		r.Changelog, r.AppVersion = clog.String, av.String

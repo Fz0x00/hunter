@@ -45,21 +45,29 @@ hunter catalog -db hunter.db -stale    # apps needing a fresh inspect
 
 ## Adding an app
 
-Add one entry to `apps.json` — no code changes:
+Add one entry to `apps.json` — no code changes. Pick **one** source type:
 
 ```json
 {
   "name": "Example",
   "publisher": "...",
-  "url": "https://example.com/download.pkg",       // direct download URL
+  "url": "https://example.com/download.pkg",       // latest URL (version from HEAD redirect)
   "github": "org/repo",                            // GitHub releases (asset_pattern to filter)
-  "release_feed": "https://...",                   // JSON feed (full_path / latest_version)
-  "version_api": "https://...",                     // returns {"version": "x.y.z"} (exact_version_url)
-  "platform": "macos|windows|linux|any"
+  "release_feed": "https://...",                   // Squirrel JSON feed (releases[].updateTo)
+  "version_api": "https://...",                    // returns {"version"|"productVersion"|"tag_name"}
+  "cask": "example",                               // Homebrew cask token (formulae.brew.sh metadata)
+  "dynamic": true,                                 // URL from scripts/collect_urls.py → dynamic-urls.json
+  "platform": "macos"
 }
 ```
 
-`component` is optional; leaving it out falls back to auto-detection from feed format.
+Resolution order: `dynamic` → `url` → `release_feed` → `cask` → `github`.
+
+Notes:
+- `cask` gives community-maintained version tracking; binary inspection only
+  applies to Electron packages (CEF/Catalyst/installer dmgs record versions but
+  no chromium_version).
+- `platform: "macos"` entries are excluded when Monitor runs with `-platform linux`.
 
 ## CI
 

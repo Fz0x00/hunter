@@ -1,119 +1,119 @@
 {
-  "updated": "2026-10-29T11:59:22Z",
+  "updated": "2026-10-30T11:52:56Z",
   "apps": {
     "AFFiNE": {
       "url": "https://github.com/toeverything/AFFiNE/releases/download/v0.27.4/affine-0.27.4-stable-macos-arm64.zip",
       "tag": "v0.27.4",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Asana": {
       "url": "https://desktop-downloads.asana.com/darwin_universal/prod/latest/Asana.dmg",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Baidu Netdisk": {
       "url": "https://issuepcdn.baidupcs.com/issue/netdisk/Macguanjia/4.50.1/BaiduNetdisk_mac_bdfc_4.50.1_arm64.dmg",
       "tag": "ver:4.50.1",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Balena Etcher": {
       "url": "https://github.com/balena-io/etcher/releases/download/v2.1.9/balenaEtcher-darwin-x64-2.1.9.zip",
       "tag": "v2.1.9",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Beekeeper Studio": {
       "url": "https://github.com/beekeeper-studio/beekeeper-studio/releases/download/v6.2.0/Beekeeper-Studio-6.2.0-arm64-mac.zip",
       "tag": "v6.2.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Bitwarden": {
-      "url": "https://github.com/bitwarden/clients/releases/download/desktop-v2026.10.1/Bitwarden-2026.10.1-universal-mac.zip",
-      "tag": "desktop-v2026.10.1",
-      "checked": "2026-10-27T11:21:15Z"
+      "url": "https://github.com/bitwarden/clients/releases/download/desktop-v2026.10.2/Bitwarden-2026.10.2-universal-mac.zip",
+      "tag": "desktop-v2026.10.2",
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Claude": {
-      "url": "https://downloads.claude.ai/releases/darwin/universal/4.29.0/Claude-2609742292f7dbce2e259e76f53620cac4da9002.zip",
-      "tag": "4.29.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "url": "https://downloads.claude.ai/releases/darwin/universal/4.4212.0/Claude-cbfe3c56d49c49332ad5a9588303c9dbc70a5e7f.zip",
+      "tag": "4.4212.0",
+      "checked": "2026-10-30T11:52:56Z"
     },
     "ClickUp": {
       "url": "https://desktop.clickup.com/mac",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "DingTalk": {
-      "url": "https://dtapp-pub.dingtalk.com/dingtalk-desktop/mac_dmg/Release/DingTalk_v9.0.5-Installer_59529713_universal.dmg",
-      "tag": "9.0.5,59529713",
-      "checked": "2026-10-29T11:59:22Z"
+      "url": "https://dtapp-pub.dingtalk.com/dingtalk-desktop/mac_dmg/Release/DingTalk_v9.0.5-Installer_59563623_universal.dmg",
+      "tag": "9.0.5,59563623",
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Discord": {
       "url": "https://discord.com/api/download?platform=osx",
       "tag": "ver:0.0.420",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Doubao": {
       "url": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao_pc/2.33.5/Doubao_X64_2.33.5.dmg",
       "tag": "ver:2.33.5",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Feishu": {
       "url": "https://sf3-cn.feishucdn.com/obj/ee-appcenter/5d428a73/Feishu-darwin_arm64-8.3.14-signed.dmg",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Figma Desktop": {
       "url": "https://desktop.figma.com/mac/Figma.zip",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Framer": {
       "url": "https://updates.framer.com/electron/darwin/arm64/Framer.zip",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "GitHub Desktop": {
       "url": "https://central.github.com/deployments/desktop/desktop/latest/darwin?format=zip",
       "tag": "ver:3.6.10",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Hyper Terminal": {
       "url": "https://github.com/vercel/hyper/releases/download/v3.4.1/Hyper-3.4.1-mac-x64.zip",
       "tag": "v3.4.1",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Insomnia": {
       "url": "https://github.com/Kong/insomnia/releases/download/core%4013.4.0/Insomnia.Core-13.4.0.dmg",
       "tag": "core@13.4.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Joplin": {
       "url": "https://github.com/laurent22/joplin/releases/download/v3.7.22/Joplin-3.7.22-arm64.DMG",
       "tag": "v3.7.22",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Linear": {
       "url": "https://releases.linear.app/mac",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Logseq": {
       "url": "https://github.com/logseq/logseq/releases/download/2.0.2/Logseq-darwin-x64-2.0.2.zip",
       "tag": "2.0.2",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Mailspring": {
       "url": "https://github.com/Foundry376/Mailspring/releases/download/1.26.2/Mailspring-AppleSilicon.zip",
       "tag": "1.26.2",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "MarkText": {
       "url": "https://github.com/marktext/marktext/releases/download/v0.23.0/marktext-mac-x64-0.23.0.zip",
       "tag": "v0.23.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Mattermost Desktop": {
       "url": "https://github.com/mattermost/desktop/releases/download/v6.3.1/mattermost-desktop-6.3.1-mac-universal.zip",
       "tag": "v6.3.1",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "MongoDB Compass": {
       "url": "https://github.com/mongodb-js/compass/releases/download/v1.53.2/mongodb-compass-1.53.2-darwin-arm64.zip",
       "tag": "v1.53.2",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Motrix": {
       "url": "https://github.com/agalwood/Motrix/releases/download/v1.8.19/Motrix-1.8.19-arm64-mac.zip",
@@ -122,75 +122,75 @@
     },
     "Notion": {
       "url": "https://www.notion.so/desktop/mac/download",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Obsidian": {
       "url": "https://github.com/obsidianmd/obsidian-releases/releases/download/v1.14.5/Obsidian-1.14.5.dmg",
       "tag": "v1.14.5",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Pear Desktop": {
       "url": "https://github.com/pear-devs/pear-desktop/releases/download/v3.12.0/YouTube-Music-3.12.0-arm64.dmg",
       "tag": "v3.12.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Postman": {
       "url": "https://dl.pstmn.io/download/latest/osx",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "QQ": {
       "url": "https://qqdl.gtimg.cn/qqfile/QQNTV2/9.9.36/release/837fcb63/QQ_7.0.2_260924_01.dmg",
       "tag": "ver:9.9.36",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Rancher Desktop": {
       "url": "https://github.com/rancher-sandbox/rancher-desktop/releases/download/v1.24.0/Rancher.Desktop-1.24.0.aarch64.dmg",
       "tag": "v1.24.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Replit": {
       "url": "https://desktop.replit.com/download/mac",
       "tag": "ver:30687061",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Rocket.Chat": {
       "url": "https://github.com/RocketChat/Rocket.Chat.Electron/releases/download/4.19.0/rocketchat-4.19.0-mac.dmg",
       "tag": "4.19.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Session": {
       "url": "https://github.com/oxen-io/session-desktop/releases/download/v1.14.3/session-desktop-mac-x64-1.14.3.dmg",
       "tag": "v1.14.3",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "SiYuan": {
       "url": "https://github.com/siyuan-note/siyuan/releases/download/v3.8.9/siyuan-3.8.9-mac-arm64.dmg",
       "tag": "v3.8.9",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Signal": {
       "url": "https://updates.signal.org/desktop/signal-macos-universal-latest.dmg",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Slack": {
       "url": "https://slack.com/ssb/download-osx-universal",
-      "tag": "ver:4.53.269",
-      "checked": "2026-10-29T11:59:22Z"
+      "tag": "ver:4.53.276",
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Spotify": {
       "url": "https://download.scdn.co/SpotifyARM64.dmg",
       "tag": "1.3.6.1921",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Steam": {
       "url": "https://client-update.steamstatic.com/appdmg_osx.zip.984652b88a9737e3f4e77c656d9ffa67d5042c2c",
       "tag": "6.1,1791918634,984652b88a9737e3f4e77c656d9ffa67d5042c2c",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Tabby": {
       "url": "https://github.com/Eugeny/tabby/releases/download/v1.0.238/tabby-1.0.238-macos-arm64.dmg",
       "tag": "v1.0.238",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Telegram": {
       "url": "https://github.com/telegramdesktop/tdesktop/releases/download/v7.2.5/tsetup.7.2.5.dmg",
@@ -200,31 +200,31 @@
     "Trilium Notes": {
       "url": "https://github.com/TriliumNext/Trilium/releases/download/v0.106.1/TriliumNotes-v0.106.1-macos-x64.zip",
       "tag": "v0.106.1",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "VS Code": {
       "url": "https://update.code.visualstudio.com/latest/darwin-universal/stable",
       "tag": "ver:1.144.0",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "WeCom": {
       "url": "https://work.weixin.qq.com/wework_admin/commdownload",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "WhatsApp": {
       "url": "https://web.whatsapp.com/desktop/mac_native/release/?version=2.26.43.20\u0026extension=zip\u0026configuration=Release\u0026branch=master\u0026is_buck=true",
       "tag": "26.43.20",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     },
     "Yakit": {
-      "url": "https://github.com/yaklang/yakit/releases/download/v1.4.9-1023/Yakit-1.4.9-1023-darwin-arm64.dmg",
-      "tag": "v1.4.9-1023",
-      "checked": "2026-10-29T11:59:22Z"
+      "url": "https://github.com/yaklang/yakit/releases/download/v1.4.9-1030/Yakit-1.4.9-1030-darwin-arm64.dmg",
+      "tag": "v1.4.9-1030",
+      "checked": "2026-10-30T11:52:56Z"
     },
     "eDEX-UI": {
       "url": "https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-macOS-x64.dmg",
       "tag": "v2.2.8",
-      "checked": "2026-10-29T11:59:22Z"
+      "checked": "2026-10-30T11:52:56Z"
     }
   }
 }

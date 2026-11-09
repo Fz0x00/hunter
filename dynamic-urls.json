@@ -1,9 +1,9 @@
 {
-  "updated": "2026-11-08T12:27:54Z",
+  "updated": "2026-11-09T14:42:31Z",
   "urls": {
     "QQ": "https://qqdl.gtimg.cn/qqfile/QQNTV2/9.9.36/release/837fcb63/QQ_7.0.2_260924_01.dmg",
-    "Doubao": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao_pc/2.34.6/Doubao_X64_2.34.6.dmg",
+    "Doubao": "https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/doubao_pc/2.35.8/Doubao_X64_2.35.8.dmg",
     "Baidu Netdisk": "https://issuepcdn.baidupcs.com/issue/netdisk/Macguanjia/4.50.1/BaiduNetdisk_mac_bdfc_4.50.1_arm64.dmg",
-    "Feishu": "https://sf3-cn.feishucdn.com/obj/ee-appcenter/3721df38/Feishu-darwin_arm64-8.4.7-signed.dmg"
+    "Feishu": "https://sf3-cn.feishucdn.com/obj/ee-appcenter/5aa9e28b/Feishu-darwin_arm64-8.5.6-signed.dmg"
   }
 }
